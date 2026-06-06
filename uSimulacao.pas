@@ -80,6 +80,10 @@ type
     function DistanciaChebyshev(X1, Y1, X2, Y2: Integer): Integer;
     function EncontrarPresaMaisProxima(X, Y: Integer; APredador: TSer; ARaio: Integer; out AX, AY: Integer): Boolean;
     function MoverUmPassoEmDirecao(X, Y: Integer; DestX, DestY: Integer; out NovoX, NovoY: Integer): Boolean;
+    function MoveUmaCasaEmDirecao(XAtual, YAtual: Integer; XAlvo, YAlvo: Integer; out NovoX, NovoY: Integer): Boolean;
+    function MoveUmaCasaParaLonge(XAtual, YAtual: Integer; XPerigo, YPerigo: Integer; out NovoX, NovoY: Integer): Boolean;
+    function EncontrarSerMaisProximo(X, Y: Integer; ATipo: TTipoSer; ARaio: Integer; out AlvoX, AlvoY: Integer): Boolean;
+    function TentarComer(X, Y: Integer; ASer: TSer; out MorreuEnvenenado: Boolean): Boolean;
   public
     constructor Create;
     destructor Destroy; override;
@@ -462,6 +466,225 @@ begin
   end;
 end;
 
+function TSimulacao.MoveUmaCasaEmDirecao(
+  XAtual, YAtual: Integer;
+  XAlvo, YAlvo: Integer;
+  out NovoX, NovoY: Integer
+): Boolean;
+var
+  lista: TListaCoordenadas;
+  i, nx, ny, dist, currDist: Integer;
+  candidatos: array[0..7] of TPoint;
+  candidatosCount: Integer;
+  minDist: Integer;
+begin
+  Result := False;
+  currDist := DistanciaChebyshev(XAtual, YAtual, XAlvo, YAlvo);
+  
+  if currDist <= 1 then Exit;
+  
+  lista := FTabuleiro.ListaVizinhosLivres(XAtual, YAtual);
+  if lista.Count = 0 then Exit;
+  
+  minDist := currDist;
+  candidatosCount := 0;
+  
+  for i := 0 to lista.Count - 1 do
+  begin
+    nx := lista.Coords[i].X;
+    ny := lista.Coords[i].Y;
+    dist := DistanciaChebyshev(nx, ny, XAlvo, YAlvo);
+    
+    if dist < minDist then
+    begin
+      minDist := dist;
+      candidatosCount := 1;
+      candidatos[0].X := nx;
+      candidatos[0].Y := ny;
+    end
+    else if (dist = minDist) and (dist < currDist) then
+    begin
+      candidatos[candidatosCount].X := nx;
+      candidatos[candidatosCount].Y := ny;
+      Inc(candidatosCount);
+    end;
+  end;
+  
+  if candidatosCount > 0 then
+  begin
+    i := Random(candidatosCount);
+    NovoX := candidatos[i].X;
+    NovoY := candidatos[i].Y;
+    Result := True;
+  end;
+end;
+
+function TSimulacao.MoveUmaCasaParaLonge(
+  XAtual, YAtual: Integer;
+  XPerigo, YPerigo: Integer;
+  out NovoX, NovoY: Integer
+): Boolean;
+var
+  lista: TListaCoordenadas;
+  i, nx, ny, dist, currDist: Integer;
+  candidatos: array[0..7] of TPoint;
+  candidatosCount: Integer;
+  maxDist: Integer;
+begin
+  Result := False;
+  currDist := DistanciaChebyshev(XAtual, YAtual, XPerigo, YPerigo);
+  
+  lista := FTabuleiro.ListaVizinhosLivres(XAtual, YAtual);
+  if lista.Count = 0 then Exit;
+  
+  maxDist := currDist;
+  candidatosCount := 0;
+  
+  for i := 0 to lista.Count - 1 do
+  begin
+    nx := lista.Coords[i].X;
+    ny := lista.Coords[i].Y;
+    dist := DistanciaChebyshev(nx, ny, XPerigo, YPerigo);
+    
+    if dist > maxDist then
+    begin
+      maxDist := dist;
+      candidatosCount := 1;
+      candidatos[0].X := nx;
+      candidatos[0].Y := ny;
+    end
+    else if (dist = maxDist) and (dist > currDist) then
+    begin
+      candidatos[candidatosCount].X := nx;
+      candidatos[candidatosCount].Y := ny;
+      Inc(candidatosCount);
+    end;
+  end;
+  
+  if candidatosCount > 0 then
+  begin
+    i := Random(candidatosCount);
+    NovoX := candidatos[i].X;
+    NovoY := candidatos[i].Y;
+    Result := True;
+  end;
+end;
+
+function TSimulacao.EncontrarSerMaisProximo(
+  X, Y: Integer;
+  ATipo: TTipoSer;
+  ARaio: Integer;
+  out AlvoX, AlvoY: Integer
+): Boolean;
+var
+  R, dx, dy, nx, ny: Integer;
+  candidatos: array of TPoint;
+  candidatosCount: Integer;
+  idx: Integer;
+begin
+  candidatos := nil;
+  Result := False;
+  candidatosCount := 0;
+  
+  for R := 1 to ARaio do
+  begin
+    for dy := -R to R do
+    begin
+      for dx := -R to R do
+      begin
+        if (Abs(dx) = R) or (Abs(dy) = R) then
+        begin
+          nx := X + dx;
+          ny := Y + dy;
+          if FTabuleiro.InBounds(nx, ny) then
+          begin
+            if FTabuleiro.GetTipoAt(nx, ny) = ATipo then
+            begin
+              if candidatosCount >= Length(candidatos) then
+                SetLength(candidatos, candidatosCount + 16);
+              candidatos[candidatosCount].X := nx;
+              candidatos[candidatosCount].Y := ny;
+              Inc(candidatosCount);
+            end;
+          end;
+        end;
+      end;
+    end;
+    
+    if candidatosCount > 0 then
+    begin
+      idx := Random(candidatosCount);
+      AlvoX := candidatos[idx].X;
+      AlvoY := candidatos[idx].Y;
+      Result := True;
+      Exit;
+    end;
+  end;
+end;
+
+function TSimulacao.TentarComer(X, Y: Integer; ASer: TSer; out MorreuEnvenenado: Boolean): Boolean;
+var
+  dx, dy, nx, ny: Integer;
+  presa: TSer;
+  candidatos: array[0..7] of TPoint;
+  candidatosCount: Integer;
+  idx: Integer;
+begin
+  Result := False;
+  MorreuEnvenenado := False;
+  candidatosCount := 0;
+  
+  for dx := -1 to 1 do
+    for dy := -1 to 1 do
+    begin
+      if (dx = 0) and (dy = 0) then Continue;
+      nx := X + dx;
+      ny := Y + dy;
+      if FTabuleiro.InBounds(nx, ny) then
+      begin
+        presa := FTabuleiro.GetEntAt(nx, ny);
+        if (presa <> nil) and PodeComer(ASer, presa) then
+        begin
+          candidatos[candidatosCount].X := nx;
+          candidatos[candidatosCount].Y := ny;
+          Inc(candidatosCount);
+        end;
+      end;
+    end;
+    
+  if candidatosCount > 0 then
+  begin
+    idx := Random(candidatosCount);
+    nx := candidatos[idx].X;
+    ny := candidatos[idx].Y;
+    presa := FTabuleiro.GetEntAt(nx, ny);
+    
+    if (ASer.Tipo = tsVegetariano) and (presa <> nil) and (presa.Tipo = tsPlanta) and (presa.Toxicidade = txToxica) then
+    begin
+      if ASer.ResistenciaVeneno = rvResistente then
+      begin
+        RegistraMorte(presa, tmPredacao);
+        FTabuleiro.ConsumeCell(nx, ny);
+        Result := True;
+      end
+      else
+      begin
+        RegistraMorte(presa, tmPredacao);
+        FTabuleiro.ConsumeCell(nx, ny);
+        MorreuEnvenenado := True;
+        Result := True;
+      end;
+    end
+    else
+    begin
+      if presa <> nil then
+        RegistraMorte(presa, tmPredacao);
+      FTabuleiro.ConsumeCell(nx, ny);
+      Result := True;
+    end;
+  end;
+end;
+
 function TSimulacao.ObterChanceMutacao(ATipo: TTipoSer): Double;
 begin
   case ATipo of
@@ -786,10 +1009,10 @@ end;
 
 procedure TSimulacao.ExecutarAcoesCelula(x, y: Integer);
 var
-  ent, neigh, presa: TSer;
-  dx, dy, nx, ny, viz, food, carnNearby, bactCount, toxicBactCount: Integer;
+  ent, neigh: TSer;
+  dx, dy, nx, ny, viz, carnNearby, bactCount, toxicBactCount: Integer;
   Raio, AlvoX, AlvoY, Dist: Integer;
-  hasAlvo, eaten, hasMoved: Boolean;
+  eaten, hasMoved, MorreuEnvenenado: Boolean;
   NovoX, NovoY: Integer;
   reproCfg: TReproducaoConfig;
   lista: TListaCoordenadas;
@@ -881,82 +1104,153 @@ begin
   NovoX := x;
   NovoY := y;
   
-  // 3. Procurar alimento
   if ent.Tipo in [tsVegetariano, tsCarnivoro] then
   begin
     if ent.Tipo = tsVegetariano then
-      Raio := FConfig.RaioBuscaHerbivoro
-    else
-      Raio := FConfig.RaioBuscaCarnivoro;
-      
-    hasAlvo := EncontrarPresaMaisProxima(x, y, ent, Raio, AlvoX, AlvoY);
-    
-    // 4. Comer se alimento estiver adjacente
-    if hasAlvo and (DistanciaChebyshev(x, y, AlvoX, AlvoY) <= 1) then
     begin
-      presa := FTabuleiro.GetEntAt(AlvoX, AlvoY);
-      
-      // Regra da planta venenosa (Seção 22.5)
-      if (ent.Tipo = tsVegetariano) and (presa <> nil) and (presa.Tipo = tsPlanta) and (presa.Toxicidade = txToxica) then
+      // 1. Fuga do carnívoro
+      Raio := FConfig.RaioBuscaHerbivoro;
+      if EncontrarSerMaisProximo(NovoX, NovoY, tsCarnivoro, Raio, AlvoX, AlvoY) then
       begin
-        if ent.ResistenciaVeneno = rvResistente then
+        if MoveUmaCasaParaLonge(NovoX, NovoY, AlvoX, AlvoY, nx, ny) then
         begin
-          RegistraMorte(presa, tmPredacao);
-          FTabuleiro.ConsumeCell(AlvoX, AlvoY);
-          eaten := True;
-        end
-        else
+          NovoX := nx;
+          NovoY := ny;
+          hasMoved := True;
+        end;
+      end;
+      
+      // Comer se alimento estiver adjacente na nova posição (sobreviver vem antes de comer)
+      if TentarComer(NovoX, NovoY, ent, MorreuEnvenenado) then
+      begin
+        if MorreuEnvenenado then
         begin
-          RegistraMorte(presa, tmPredacao);
-          FTabuleiro.ConsumeCell(AlvoX, AlvoY);
           RegistraMorte(ent, tmVeneno);
           FTabuleiro.FreeCell(x, y);
           Inc(FMortesPorVeneno);
-          Exit; // Morreu envenenado
+          Exit;
         end;
-      end
-      else
-      begin
-        if presa <> nil then
-          RegistraMorte(presa, tmPredacao);
-        FTabuleiro.ConsumeCell(AlvoX, AlvoY);
         eaten := True;
       end;
-    end;
-    
-    // 5. Se faminto e alimento estiver distante, mover em direção ao alimento
-    if (not eaten) then
-    begin
-      if (ent.CiclosSemComida > 0) and hasAlvo then
+      
+      // 2. Buscar planta se estiver com fome
+      if (not eaten) and (ent.CiclosSemComida > 0) then
       begin
-        if MoverUmPassoEmDirecao(x, y, AlvoX, AlvoY, nx, ny) then
+        if EncontrarSerMaisProximo(NovoX, NovoY, tsPlanta, Raio, AlvoX, AlvoY) then
         begin
-          FTabuleiro.CopyCellToNext(x, y, nx, ny);
-          NovoX := nx;
-          NovoY := ny;
-          hasMoved := True;
+          if MoveUmaCasaEmDirecao(NovoX, NovoY, AlvoX, AlvoY, nx, ny) then
+          begin
+            NovoX := nx;
+            NovoY := ny;
+            hasMoved := True;
+            
+            if TentarComer(NovoX, NovoY, ent, MorreuEnvenenado) then
+            begin
+              if MorreuEnvenenado then
+              begin
+                RegistraMorte(ent, tmVeneno);
+                FTabuleiro.FreeCell(x, y);
+                Inc(FMortesPorVeneno);
+                Exit;
+              end;
+              eaten := True;
+            end;
+          end;
         end;
       end;
       
-      // 6. Se não achou alimento (ou não conseguiu mover em direção a ele), movimento aleatório como fallback
+      // 3. Se não moveu nem na fuga nem na busca, movimento aleatório opcional como fallback
       if (not hasMoved) then
       begin
-        lista := FTabuleiro.ListaVizinhosLivres(x, y);
+        lista := FTabuleiro.ListaVizinhosLivres(NovoX, NovoY);
         if lista.Count > 0 then
         begin
           idx := Random(lista.Count);
-          nx := lista.Coords[idx].X;
-          ny := lista.Coords[idx].Y;
-          FTabuleiro.CopyCellToNext(x, y, nx, ny);
-          NovoX := nx;
-          NovoY := ny;
+          NovoX := lista.Coords[idx].X;
+          NovoY := lista.Coords[idx].Y;
           hasMoved := True;
+          
+          if TentarComer(NovoX, NovoY, ent, MorreuEnvenenado) then
+          begin
+            if MorreuEnvenenado then
+            begin
+              RegistraMorte(ent, tmVeneno);
+              FTabuleiro.FreeCell(x, y);
+              Inc(FMortesPorVeneno);
+              Exit;
+            end;
+            eaten := True;
+          end;
         end;
       end;
+      
+      // Grava no tabuleiro final
+      if hasMoved then
+        FTabuleiro.CopyCellToNext(x, y, NovoX, NovoY);
+    end
+    else if ent.Tipo = tsCarnivoro then
+    begin
+      Raio := FConfig.RaioBuscaCarnivoro;
+      if EncontrarSerMaisProximo(NovoX, NovoY, tsVegetariano, Raio, AlvoX, AlvoY) then
+      begin
+        // Determina o máximo de deslocamento (2 para faminto, 1 para alimentado)
+        if ent.CiclosSemComida > 0 then
+          Dist := 2
+        else
+          Dist := 1;
+          
+        // Passo 1
+        if DistanciaChebyshev(NovoX, NovoY, AlvoX, AlvoY) > 1 then
+        begin
+          if MoveUmaCasaEmDirecao(NovoX, NovoY, AlvoX, AlvoY, nx, ny) then
+          begin
+            NovoX := nx;
+            NovoY := ny;
+            hasMoved := True;
+          end;
+        end;
+        
+        // Passo 2
+        if (Dist = 2) and (DistanciaChebyshev(NovoX, NovoY, AlvoX, AlvoY) > 1) then
+        begin
+          if MoveUmaCasaEmDirecao(NovoX, NovoY, AlvoX, AlvoY, nx, ny) then
+          begin
+            NovoX := nx;
+            NovoY := ny;
+            hasMoved := True;
+          end;
+        end;
+        
+        // Se ficou adjacente ao final do movimento, tenta comer
+        if DistanciaChebyshev(NovoX, NovoY, AlvoX, AlvoY) <= 1 then
+        begin
+          if TentarComer(NovoX, NovoY, ent, MorreuEnvenenado) then
+            eaten := True;
+        end;
+      end;
+      
+      // Se não encontrou herbívoro ou não se moveu, faz movimento aleatório opcional
+      if (not hasMoved) then
+      begin
+        lista := FTabuleiro.ListaVizinhosLivres(NovoX, NovoY);
+        if lista.Count > 0 then
+        begin
+          idx := Random(lista.Count);
+          NovoX := lista.Coords[idx].X;
+          NovoY := lista.Coords[idx].Y;
+          hasMoved := True;
+          
+          if TentarComer(NovoX, NovoY, ent, MorreuEnvenenado) then
+            eaten := True;
+        end;
+      end;
+      
+      // Grava no tabuleiro final
+      if hasMoved then
+        FTabuleiro.CopyCellToNext(x, y, NovoX, NovoY);
     end;
   end;
   
-  // Se não se moveu e não morreu, copia para a mesma posição no buffer da próxima rodada
   if not hasMoved then
   begin
     FTabuleiro.CopyCellToNext(x, y, x, y);
