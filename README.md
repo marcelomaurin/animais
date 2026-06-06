@@ -8,4 +8,4 @@
 
 **Animais** é uma simulação visual desenvolvida em **Lazarus / Free Pascal**, inspirada no clássico **Jogo da Vida**, mas modificada para representar um pequeno ecossistema evolutivo.
 
-No Jogo da Vida tradicional
+No Jogo da Vida
