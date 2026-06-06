@@ -99,6 +99,10 @@ type
     QtdPlantasInicial: Integer;
     QtdVegetarianosInicial: Integer;
     QtdCarnivorosInicial: Integer;
+    
+    // Raio de busca para comportamento direcionado
+    RaioBuscaHerbivoro: Integer;
+    RaioBuscaCarnivoro: Integer;
   end;
 
 function ObterConfigPadrao: TSimulacaoConfig;
@@ -171,17 +175,17 @@ begin
   Result.Altura := 200;
   Result.PercentualBacteriasInicial := 0.0; // Usando valor absoluto por padrão
   Result.CicloEntradaPlantas := 300;
-  Result.CicloEntradaVegetarianos := 600;
-  Result.CicloEntradaCarnivoros := 900;
+  Result.CicloEntradaVegetarianos := 150;
+  Result.CicloEntradaCarnivoros := 300;
   Result.QtdPlantasEntrada := 10;
-  Result.QtdVegetarianosEntrada := 5;
-  Result.QtdCarnivorosEntrada := 2;
+  Result.QtdVegetarianosEntrada := 10;
+  Result.QtdCarnivorosEntrada := 3;
   Result.IntervaloTimer := 10;
   Result.SeedAleatoria := 0;
   
-  // Limites de fome padrões
-  Result.LimiteFomeCarnivoro := 2;
-  Result.LimiteFomeVegetariano := 3;
+  // Limites de fome padrões (Seção 7)
+  Result.LimiteFomeCarnivoro := 4;
+  Result.LimiteFomeVegetariano := 5;
   Result.LimiteFomeBacteria := 6;
   
   // Configuração reprodutiva padrão de Bactérias
@@ -189,20 +193,20 @@ begin
   Result.ReproBacteria.CiclosParaReproduzir := 2;
   Result.ReproBacteria.ChanceReproducao := 0.80;
   
-  // Configuração reprodutiva padrão de Plantas
-  Result.ReproPlanta.MaxDescendentesPorCiclo := 3;
-  Result.ReproPlanta.CiclosParaReproduzir := 4;
-  Result.ReproPlanta.ChanceReproducao := 0.65;
+  // Configuração reprodutiva padrão de Plantas (Seção 12)
+  Result.ReproPlanta.MaxDescendentesPorCiclo := 2;
+  Result.ReproPlanta.CiclosParaReproduzir := 5;
+  Result.ReproPlanta.ChanceReproducao := 0.45;
   
-  // Configuração reprodutiva padrão de Vegetarianos
+  // Configuração reprodutiva padrão de Vegetarianos/Herbívoros (Seção 12)
   Result.ReproVegetariano.MaxDescendentesPorCiclo := 1;
-  Result.ReproVegetariano.CiclosParaReproduzir := 8;
-  Result.ReproVegetariano.ChanceReproducao := 0.35;
+  Result.ReproVegetariano.CiclosParaReproduzir := 6;
+  Result.ReproVegetariano.ChanceReproducao := 0.55;
   
-  // Configuração reprodutiva padrão de Carnívoros
+  // Configuração reprodutiva padrão de Carnívoros (Seção 12)
   Result.ReproCarnivoro.MaxDescendentesPorCiclo := 1;
-  Result.ReproCarnivoro.CiclosParaReproduzir := 12;
-  Result.ReproCarnivoro.ChanceReproducao := 0.20;
+  Result.ReproCarnivoro.CiclosParaReproduzir := 10;
+  Result.ReproCarnivoro.ChanceReproducao := 0.35;
   
   // Limite de ocupação global padrão
   Result.PercentualMaximoOcupacao := 0.85;
@@ -219,11 +223,15 @@ begin
   Result.MaxPontosHistorico := 10000;
   Result.IntervaloAtualizacaoGrafico := 10;
   
-  // Valores padrões de quantidades iniciais (Seção 24.15)
+  // Valores padrões de quantidades iniciais (Seção 10 / Requisito 7)
   Result.QtdBacteriasInicial := 10;
   Result.QtdPlantasInicial := 100;
   Result.QtdVegetarianosInicial := 10;
   Result.QtdCarnivorosInicial := 4;
+  
+  // Raio de busca padrão (Seção 4.1)
+  Result.RaioBuscaHerbivoro := 5;
+  Result.RaioBuscaCarnivoro := 7;
 end;
 
 end.

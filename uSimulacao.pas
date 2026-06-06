@@ -75,6 +75,11 @@ type
     procedure MutarPropriedadesFilho(ATipo: TTipoSer; 
       var ATamanho: TTamanhoAnimal; var AToxicidade: TToxicidade; 
       var AResistenciaVeneno: TResistenciaVeneno; var AResistenciaToxina: TResistenciaToxina);
+      
+    // Comportamento Direcionado e Busca Ativa (Seções 4, 5 e 14)
+    function DistanciaChebyshev(X1, Y1, X2, Y2: Integer): Integer;
+    function EncontrarPresaMaisProxima(X, Y: Integer; APredador: TSer; ARaio: Integer; out AX, AY: Integer): Boolean;
+    function MoverUmPassoEmDirecao(X, Y: Integer; DestX, DestY: Integer; out NovoX, NovoY: Integer): Boolean;
   public
     constructor Create;
     destructor Destroy; override;
@@ -348,6 +353,115 @@ begin
   end;
 end;
 
+function TSimulacao.DistanciaChebyshev(X1, Y1, X2, Y2: Integer): Integer;
+begin
+  Result := Max(Abs(X1 - X2), Abs(Y1 - Y2));
+end;
+
+function TSimulacao.EncontrarPresaMaisProxima(
+  X, Y: Integer;
+  APredador: TSer;
+  ARaio: Integer;
+  out AX, AY: Integer
+): Boolean;
+var
+  R, dx, dy, nx, ny: Integer;
+  candidatos: array of TPoint;
+  candidatosCount: Integer;
+  presa: TSer;
+  idx: Integer;
+begin
+  candidatos := nil;
+  Result := False;
+  candidatosCount := 0;
+  
+  for R := 1 to ARaio do
+  begin
+    for dy := -R to R do
+    begin
+      for dx := -R to R do
+      begin
+        if (Abs(dx) = R) or (Abs(dy) = R) then
+        begin
+          nx := X + dx;
+          ny := Y + dy;
+          if FTabuleiro.InBounds(nx, ny) then
+          begin
+            presa := FTabuleiro.GetEntAt(nx, ny);
+            if (presa <> nil) and PodeComer(APredador, presa) then
+            begin
+              if candidatosCount >= Length(candidatos) then
+                SetLength(candidatos, candidatosCount + 16);
+              candidatos[candidatosCount].X := nx;
+              candidatos[candidatosCount].Y := ny;
+              Inc(candidatosCount);
+            end;
+          end;
+        end;
+      end;
+    end;
+    
+    if candidatosCount > 0 then
+    begin
+      idx := Random(candidatosCount);
+      AX := candidatos[idx].X;
+      AY := candidatos[idx].Y;
+      Result := True;
+      Exit;
+    end;
+  end;
+end;
+
+function TSimulacao.MoverUmPassoEmDirecao(
+  X, Y: Integer;
+  DestX, DestY: Integer;
+  out NovoX, NovoY: Integer
+): Boolean;
+var
+  lista: TListaCoordenadas;
+  i: Integer;
+  nx, ny: Integer;
+  dist, minDist: Integer;
+  candidatos: array[0..7] of TPoint;
+  candidatosCount: Integer;
+begin
+  Result := False;
+  lista := FTabuleiro.ListaVizinhosLivres(X, Y);
+  if lista.Count = 0 then Exit;
+  
+  minDist := 999999;
+  candidatosCount := 0;
+  
+  for i := 0 to lista.Count - 1 do
+  begin
+    nx := lista.Coords[i].X;
+    ny := lista.Coords[i].Y;
+    dist := DistanciaChebyshev(nx, ny, DestX, DestY);
+    
+    if dist < minDist then
+    begin
+      minDist := dist;
+      candidatosCount := 1;
+      candidatos[0].X := nx;
+      candidatos[0].Y := ny;
+    end
+    else if dist = minDist then
+    begin
+      candidatos[candidatosCount].X := nx;
+      candidatos[candidatosCount].Y := ny;
+      Inc(candidatosCount);
+    end;
+  end;
+  
+  if candidatosCount > 0 then
+  begin
+    i := Random(candidatosCount);
+    NovoX := candidatos[i].X;
+    NovoY := candidatos[i].Y;
+    Result := True;
+  end;
+end;
+
 function TSimulacao.ObterChanceMutacao(ATipo: TTipoSer): Double;
 begin
   case ATipo of
@@ -613,25 +727,7 @@ var
 begin
   reproCfg := ObterReproConfig(ASer.Tipo);
   
-  if FOcupacaoGeral >= FConfig.PercentualMaximoOcupacao then Exit;
   if (ASer.Tipo in [tsVegetariano, tsCarnivoro]) and (ASer.CiclosSemComida > 0) then Exit;
-  
-  if ASer.Tipo = tsVegetariano then
-  begin
-    hasPlanta := False;
-    for dx := -1 to 1 do
-      for dy := -1 to 1 do
-      begin
-        if (dx = 0) and (dy = 0) then Continue;
-        nx := x + dx; ny := y + dy;
-        if FTabuleiro.InBounds(nx, ny) and (FTabuleiro.GetTipoAt(nx, ny) = tsPlanta) then
-        begin
-          hasPlanta := True;
-          Break;
-        end;
-      end;
-    if not hasPlanta then Exit;
-  end;
   
   if Random <= reproCfg.ChanceReproducao then
   begin
@@ -690,20 +786,19 @@ end;
 
 procedure TSimulacao.ExecutarAcoesCelula(x, y: Integer);
 var
-  ent: TSer;
-  toDie, toMove: Boolean;
-  viz, food, carnNearby, bactCount, toxicBactCount: Integer;
-  dx, dy, nx, ny: Integer;
+  ent, neigh, presa: TSer;
+  dx, dy, nx, ny, viz, food, carnNearby, bactCount, toxicBactCount: Integer;
+  Raio, AlvoX, AlvoY, Dist: Integer;
+  hasAlvo, eaten, hasMoved: Boolean;
+  NovoX, NovoY: Integer;
   reproCfg: TReproducaoConfig;
   lista: TListaCoordenadas;
-  eaten: Boolean;
   idx: Integer;
-  neigh: TSer;
 begin
   ent := FTabuleiro.GetEntAt(x, y);
   if ent = nil then Exit;
   
-  // Incrementa idade do ser
+  // 1. Incrementar idade
   ent.CicloVidaAtual := ent.CicloVidaAtual + 1;
   ent.CicloReproAtual := ent.CicloReproAtual + 1;
   
@@ -723,71 +818,26 @@ begin
       
     if (toxicBactCount > 0) and (ent.ResistenciaToxina = rtNenhuma) then
     begin
-      // Planta envelhece mais rápido
       ent.CicloVidaAtual := ent.CicloVidaAtual + 2 * toxicBactCount;
-      if ent.CicloVidaAtual >= ent.CicloVidaMax then
-      begin
-        RegistraMorte(ent, tmToxina);
-        FTabuleiro.FreeCell(x, y);
-        Inc(FMortesPorToxina);
-        Exit;
-      end;
     end;
   end;
   
-  // 1. Processa Alimentação (se aplicável)
-  eaten := False;
-  if ent.Tipo in [tsVegetariano, tsCarnivoro] then
-  begin
-    eaten := ConsumeFood(x, y, ent);
-    // Se ele morreu durante a alimentação (ex: comeu planta venenosa), já foi liberado
-    if FTabuleiro.GetEntAt(x, y) = nil then Exit;
-  end;
-  
-  // 2. Atualiza contador de fome
-  if eaten then
-  begin
-    ent.CiclosSemComida := 0;
-  end
-  else
-  begin
-    if SerPossuiFome(ent.Tipo) then
-    begin
-      ent.CiclosSemComida := ent.CiclosSemComida + 1;
-    end;
-  end;
-  
-  // 3. Verifica morte por fome
-  if SerPossuiFome(ent.Tipo) and (ent.CiclosSemComida >= GetLimiteFome(ent.Tipo)) then
-  begin
-    RegistraMorte(ent, tmFome);
-    Inc(FMortesPorFome);
-    case ent.Tipo of
-      tsBacteria: Inc(FMortesFomeBacteria);
-      tsVegetariano: Inc(FMortesFomeVegetariano);
-      tsCarnivoro: Inc(FMortesFomeCarnivoro);
-    end;
-    FTabuleiro.FreeCell(x, y);
-    Exit;
-  end;
-  
-  // 4. Verifica morte por velhice
+  // 2. Verificar morte por idade
   if ent.CicloVidaAtual >= ent.CicloVidaMax then
   begin
-    RegistraMorte(ent, tmIdade);
+    if ent.Tipo = tsPlanta then
+      RegistraMorte(ent, tmToxina)
+    else
+      RegistraMorte(ent, tmIdade);
+      
     FTabuleiro.FreeCell(x, y);
     Exit;
   end;
   
-  toDie := False;
-  toMove := False;
-  
+  // Para bactérias, verificar vizinhos e morte por superpopulação local
   viz := 0;
-  food := 0;
-  carnNearby := 0;
   bactCount := 0;
-  
-  // Verifica vizinhança no BoardAtual
+  carnNearby := 0;
   for dx := -1 to 1 do
     for dy := -1 to 1 do
     begin
@@ -796,87 +846,154 @@ begin
       if FTabuleiro.InBounds(nx, ny) then
       begin
         if FTabuleiro.GetTipoAt(nx, ny) <> tsNone then Inc(viz);
-        case ent.Tipo of
-          tsVegetariano:
-          begin
-            if FTabuleiro.GetTipoAt(nx, ny) in [tsPlanta, tsBacteria] then Inc(food);
-            if FTabuleiro.GetTipoAt(nx, ny) = tsCarnivoro then Inc(carnNearby);
-          end;
-          tsCarnivoro:
-          begin
-            if FTabuleiro.GetTipoAt(nx, ny) = tsVegetariano then Inc(food);
-            if FTabuleiro.GetTipoAt(nx, ny) = tsBacteria then Inc(bactCount);
-          end;
-          tsPlanta:
-          begin
-            if FTabuleiro.GetTipoAt(nx, ny) = tsBacteria then Inc(bactCount);
-          end;
+        if ent.Tipo = tsVegetariano then
+        begin
+          if FTabuleiro.GetTipoAt(nx, ny) = tsCarnivoro then Inc(carnNearby);
+        end
+        else if ent.Tipo = tsCarnivoro then
+        begin
+          if FTabuleiro.GetTipoAt(nx, ny) = tsBacteria then Inc(bactCount);
         end;
       end;
     end;
     
-  // Aplica as regras específicas de ciclo de vida e sobrevivência
-  case ent.Tipo of
-    tsBacteria:
-    begin
-      if viz > 3 then toDie := True;
-    end;
-    
-    tsPlanta:
-    begin
-      // Plantas não morrem por fome, apenas velhice ou toxinas
-    end;
-    
-    tsVegetariano:
-    begin
-      if not eaten then
-      begin
-        toMove := True; // Move-se se não encontrou alimento
-      end;
-      if carnNearby > 0 then toMove := True;
-    end;
-    
-    tsCarnivoro:
-    begin
-      // Bactérias estressam o carnívoro (envelhecimento acelerado)
-      if bactCount > 0 then
-        ent.CicloVidaAtual := ent.CicloVidaAtual + (3 * bactCount);
-        
-      if not eaten then toMove := True;
-      if viz = 0 then toMove := True;
-    end;
-  end;
-  
-  // Processamento de morte
-  if toDie then
+  if (ent.Tipo = tsBacteria) and (viz > 3) then
   begin
     RegistraMorte(ent, tmConflito);
     FTabuleiro.FreeCell(x, y);
     Exit;
   end;
   
-  // 5. Processamento de Reprodução
-  reproCfg := ObterReproConfig(ent.Tipo);
-  if ent.CicloReproAtual >= reproCfg.CiclosParaReproduzir then
+  // Carnívoros aceleram envelhecimento perto de bactérias
+  if (ent.Tipo = tsCarnivoro) and (bactCount > 0) then
   begin
-    ProcessaReproducao(x, y, ent);
-  end;
-  
-  // 6. Processamento de Movimentação
-  if toMove then
-  begin
-    lista := FTabuleiro.ListaVizinhosLivres(x, y);
-    if lista.Count > 0 then
+    ent.CicloVidaAtual := ent.CicloVidaAtual + (3 * bactCount);
+    if ent.CicloVidaAtual >= ent.CicloVidaMax then
     begin
-      idx := Random(lista.Count);
-      FTabuleiro.CopyCellToNext(x, y, lista.Coords[idx].X, lista.Coords[idx].Y);
+      RegistraMorte(ent, tmIdade);
+      FTabuleiro.FreeCell(x, y);
+      Exit;
     end;
   end;
   
-  // Se ainda estiver na grade ativa (não se moveu nem morreu), copia para a próxima grade
-  if FTabuleiro.GetEntAt(x, y) = ent then
+  eaten := False;
+  hasMoved := False;
+  NovoX := x;
+  NovoY := y;
+  
+  // 3. Procurar alimento
+  if ent.Tipo in [tsVegetariano, tsCarnivoro] then
+  begin
+    if ent.Tipo = tsVegetariano then
+      Raio := FConfig.RaioBuscaHerbivoro
+    else
+      Raio := FConfig.RaioBuscaCarnivoro;
+      
+    hasAlvo := EncontrarPresaMaisProxima(x, y, ent, Raio, AlvoX, AlvoY);
+    
+    // 4. Comer se alimento estiver adjacente
+    if hasAlvo and (DistanciaChebyshev(x, y, AlvoX, AlvoY) <= 1) then
+    begin
+      presa := FTabuleiro.GetEntAt(AlvoX, AlvoY);
+      
+      // Regra da planta venenosa (Seção 22.5)
+      if (ent.Tipo = tsVegetariano) and (presa <> nil) and (presa.Tipo = tsPlanta) and (presa.Toxicidade = txToxica) then
+      begin
+        if ent.ResistenciaVeneno = rvResistente then
+        begin
+          RegistraMorte(presa, tmPredacao);
+          FTabuleiro.ConsumeCell(AlvoX, AlvoY);
+          eaten := True;
+        end
+        else
+        begin
+          RegistraMorte(presa, tmPredacao);
+          FTabuleiro.ConsumeCell(AlvoX, AlvoY);
+          RegistraMorte(ent, tmVeneno);
+          FTabuleiro.FreeCell(x, y);
+          Inc(FMortesPorVeneno);
+          Exit; // Morreu envenenado
+        end;
+      end
+      else
+      begin
+        if presa <> nil then
+          RegistraMorte(presa, tmPredacao);
+        FTabuleiro.ConsumeCell(AlvoX, AlvoY);
+        eaten := True;
+      end;
+    end;
+    
+    // 5. Se faminto e alimento estiver distante, mover em direção ao alimento
+    if (not eaten) then
+    begin
+      if (ent.CiclosSemComida > 0) and hasAlvo then
+      begin
+        if MoverUmPassoEmDirecao(x, y, AlvoX, AlvoY, nx, ny) then
+        begin
+          FTabuleiro.CopyCellToNext(x, y, nx, ny);
+          NovoX := nx;
+          NovoY := ny;
+          hasMoved := True;
+        end;
+      end;
+      
+      // 6. Se não achou alimento (ou não conseguiu mover em direção a ele), movimento aleatório como fallback
+      if (not hasMoved) then
+      begin
+        lista := FTabuleiro.ListaVizinhosLivres(x, y);
+        if lista.Count > 0 then
+        begin
+          idx := Random(lista.Count);
+          nx := lista.Coords[idx].X;
+          ny := lista.Coords[idx].Y;
+          FTabuleiro.CopyCellToNext(x, y, nx, ny);
+          NovoX := nx;
+          NovoY := ny;
+          hasMoved := True;
+        end;
+      end;
+    end;
+  end;
+  
+  // Se não se moveu e não morreu, copia para a mesma posição no buffer da próxima rodada
+  if not hasMoved then
   begin
     FTabuleiro.CopyCellToNext(x, y, x, y);
+  end;
+  
+  // 7. Atualizar fome
+  if ent.Tipo in [tsVegetariano, tsCarnivoro] then
+  begin
+    if eaten then
+      ent.CiclosSemComida := 0
+    else
+      ent.CiclosSemComida := ent.CiclosSemComida + 1;
+      
+    // 8. Verificar morte por fome
+    if ent.CiclosSemComida >= GetLimiteFome(ent.Tipo) then
+    begin
+      RegistraMorte(ent, tmFome);
+      Inc(FMortesPorFome);
+      if ent.Tipo = tsVegetariano then
+        Inc(FMortesFomeVegetariano)
+      else
+        Inc(FMortesFomeCarnivoro);
+        
+      if hasMoved then
+        FTabuleiro.FreeCellNext(NovoX, NovoY)
+      else
+        FTabuleiro.FreeCell(x, y);
+        
+      Exit;
+    end;
+  end;
+  
+  // 9. Processar reprodução
+  reproCfg := ObterReproConfig(ent.Tipo);
+  if ent.CicloReproAtual >= reproCfg.CiclosParaReproduzir then
+  begin
+    ProcessaReproducao(NovoX, NovoY, ent);
   end;
 end;
 
