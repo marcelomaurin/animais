@@ -87,6 +87,12 @@ type
     function ObterPontosMateriaOrganica(ASer: TSer): Integer;
     procedure SpawnMateriaOrganica(X, Y, APontos: Integer);
     function CalcularBonusMutualismo(X, Y: Integer; ASer: TSer): Double;
+    
+    // Movimento baseado em oportunidade alimentar
+    function AdjacenteTemTipo(ATipo: TTipoSer; X, Y: Integer): Boolean;
+    function EhPresaValida(APredador, APresa: TSer): Boolean;
+    function PontuaMovimento(XAtual, YAtual, XDestino, YDestino: Integer; ASer: TSer): Integer;
+    function EscolheMelhorMovimento(X, Y: Integer; ASer: TSer; out NovoX, NovoY: Integer): Boolean;
   public
     constructor Create;
     destructor Destroy; override;
@@ -363,6 +369,206 @@ end;
 function TSimulacao.DistanciaChebyshev(X1, Y1, X2, Y2: Integer): Integer;
 begin
   Result := Max(Abs(X1 - X2), Abs(Y1 - Y2));
+end;
+
+// Verifica se existe um ser do tipo especificado adjacente à posição (X,Y)
+function TSimulacao.AdjacenteTemTipo(ATipo: TTipoSer; X, Y: Integer): Boolean;
+var
+  dx, dy, nx, ny: Integer;
+  ent: TSer;
+begin
+  Result := False;
+  for dx := -1 to 1 do
+    for dy := -1 to 1 do
+      if not ((dx = 0) and (dy = 0)) then
+      begin
+        nx := X + dx;
+        ny := Y + dy;
+        if FTabuleiro.InBounds(nx, ny) then
+        begin
+          ent := FTabuleiro.GetEntAt(nx, ny);
+          if (ent <> nil) and (ent.Tipo = ATipo) then
+            Exit(True);
+        end;
+      end;
+end;
+
+// Verifica se APresa é uma presa válida para APredador
+function TSimulacao.EhPresaValida(APredador, APresa: TSer): Boolean;
+begin
+  Result := False;
+  if APresa = nil then Exit;
+  if APresa.Tipo = tsVegetariano then
+    Exit(True);
+  if (APresa.Tipo = tsCarnivoro) and (Ord(APredador.Tamanho) > Ord(APresa.Tamanho)) then
+    Exit(True);
+end;
+
+// Pontua uma célula candidata para movimento baseado em oportunidade alimentar
+function TSimulacao.PontuaMovimento(XAtual, YAtual, XDestino, YDestino: Integer; ASer: TSer): Integer;
+var
+  score: Integer;
+  curDist, newDist: Integer;
+  alvoX, alvoY: Integer;
+  i, j, cnt: Integer;
+  neigh: TSer;
+begin
+  score := 0;
+
+  if ASer.Tipo = tsVegetariano then
+  begin
+    // +3 se adjacente a uma planta após o movimento
+    if AdjacenteTemTipo(tsPlanta, XDestino, YDestino) then
+      Inc(score, 3);
+
+    // +2 se se aproxima da planta mais próxima
+    if EncontrarSerMaisProximo(XAtual, YAtual, tsPlanta, FConfig.RaioBuscaHerbivoro, alvoX, alvoY) then
+      curDist := DistanciaChebyshev(XAtual, YAtual, alvoX, alvoY)
+    else
+      curDist := 9999;
+    if EncontrarSerMaisProximo(XDestino, YDestino, tsPlanta, FConfig.RaioBuscaHerbivoro, alvoX, alvoY) then
+      newDist := DistanciaChebyshev(XDestino, YDestino, alvoX, alvoY)
+    else
+      newDist := 9999;
+    if newDist < curDist then
+      Inc(score, 2);
+
+    // +1 por cada planta no raio de busca ao redor do destino
+    cnt := 0;
+    for i := -FConfig.RaioBuscaHerbivoro to FConfig.RaioBuscaHerbivoro do
+      for j := -FConfig.RaioBuscaHerbivoro to FConfig.RaioBuscaHerbivoro do
+        if (i <> 0) or (j <> 0) then
+          if FTabuleiro.InBounds(XDestino + i, YDestino + j) then
+          begin
+            neigh := FTabuleiro.GetEntAt(XDestino + i, YDestino + j);
+            if (neigh <> nil) and (neigh.Tipo = tsPlanta) then
+              Inc(cnt);
+          end;
+    Inc(score, cnt);
+
+    // Fuga de carnívoro: +2 se se afasta, -3 se se aproxima
+    if EncontrarSerMaisProximo(XAtual, YAtual, tsCarnivoro, FConfig.RaioBuscaHerbivoro, alvoX, alvoY) then
+      curDist := DistanciaChebyshev(XAtual, YAtual, alvoX, alvoY)
+    else
+      curDist := 9999;
+    if EncontrarSerMaisProximo(XDestino, YDestino, tsCarnivoro, FConfig.RaioBuscaHerbivoro, alvoX, alvoY) then
+      newDist := DistanciaChebyshev(XDestino, YDestino, alvoX, alvoY)
+    else
+      newDist := 9999;
+    if newDist > curDist then
+      Inc(score, 2)
+    else if newDist < curDist then
+      Dec(score, 3);
+  end
+  else if ASer.Tipo = tsCarnivoro then
+  begin
+    // +4 se adjacente a presa válida após o movimento
+    for i := -1 to 1 do
+      for j := -1 to 1 do
+        if not ((i = 0) and (j = 0)) then
+          if FTabuleiro.InBounds(XDestino + i, YDestino + j) then
+          begin
+            neigh := FTabuleiro.GetEntAt(XDestino + i, YDestino + j);
+            if EhPresaValida(ASer, neigh) then
+            begin
+              Inc(score, 4);
+              Break;
+            end;
+          end;
+
+    // +3 se se aproxima da presa mais próxima (herbívoro ou carnívoro menor)
+    if EncontrarSerMaisProximo(XAtual, YAtual, tsVegetariano, FConfig.RaioBuscaCarnivoro, alvoX, alvoY) then
+      curDist := DistanciaChebyshev(XAtual, YAtual, alvoX, alvoY)
+    else if EncontrarSerMaisProximo(XAtual, YAtual, tsCarnivoro, FConfig.RaioBuscaCarnivoro, alvoX, alvoY) then
+      curDist := DistanciaChebyshev(XAtual, YAtual, alvoX, alvoY)
+    else
+      curDist := 9999;
+
+    if EncontrarSerMaisProximo(XDestino, YDestino, tsVegetariano, FConfig.RaioBuscaCarnivoro, alvoX, alvoY) then
+      newDist := DistanciaChebyshev(XDestino, YDestino, alvoX, alvoY)
+    else if EncontrarSerMaisProximo(XDestino, YDestino, tsCarnivoro, FConfig.RaioBuscaCarnivoro, alvoX, alvoY) then
+      newDist := DistanciaChebyshev(XDestino, YDestino, alvoX, alvoY)
+    else
+      newDist := 9999;
+    if newDist < curDist then
+      Inc(score, 3);
+
+    // +1 por cada presa válida no raio de busca ao redor do destino
+    cnt := 0;
+    for i := -FConfig.RaioBuscaCarnivoro to FConfig.RaioBuscaCarnivoro do
+      for j := -FConfig.RaioBuscaCarnivoro to FConfig.RaioBuscaCarnivoro do
+        if (i <> 0) or (j <> 0) then
+          if FTabuleiro.InBounds(XDestino + i, YDestino + j) then
+          begin
+            neigh := FTabuleiro.GetEntAt(XDestino + i, YDestino + j);
+            if EhPresaValida(ASer, neigh) then
+              Inc(cnt);
+          end;
+    Inc(score, cnt);
+  end;
+
+  Result := score;
+end;
+
+// Escolhe o melhor movimento entre as células vizinhas livres.
+// Só move se houver melhoria real (score > 0).
+// Se não houver melhoria, usa chance aleatória de exploração.
+function TSimulacao.EscolheMelhorMovimento(X, Y: Integer; ASer: TSer; out NovoX, NovoY: Integer): Boolean;
+var
+  lista: TListaCoordenadas;
+  i, idx: Integer;
+  candX, candY: Integer;
+  bestScore, curScore: Integer;
+  bestList: array of TPoint;
+  bestCount: Integer;
+begin
+  Result := False;
+  lista := FTabuleiro.ListaVizinhosLivres(X, Y);
+  if lista.Count = 0 then Exit;
+  
+  bestScore := 0; // Limiar: só move se score > 0 (melhoria real)
+  bestCount := 0;
+  
+  for i := 0 to lista.Count - 1 do
+  begin
+    candX := lista.Coords[i].X;
+    candY := lista.Coords[i].Y;
+    curScore := PontuaMovimento(X, Y, candX, candY, ASer);
+    if curScore > bestScore then
+    begin
+      bestScore := curScore;
+      SetLength(bestList, 1);
+      bestList[0].X := candX;
+      bestList[0].Y := candY;
+      bestCount := 1;
+    end
+    else if (curScore = bestScore) and (curScore > 0) then
+    begin
+      Inc(bestCount);
+      SetLength(bestList, bestCount);
+      bestList[bestCount - 1].X := candX;
+      bestList[bestCount - 1].Y := candY;
+    end;
+  end;
+  
+  // Se encontrou célula com melhoria real, move para lá
+  if bestCount > 0 then
+  begin
+    idx := Random(bestCount);
+    NovoX := bestList[idx].X;
+    NovoY := bestList[idx].Y;
+    Result := True;
+    Exit;
+  end;
+  
+  // Sem melhoria: chance aleatória de exploração
+  if Random < FConfig.ChanceMovimentoAleatorioSemAlvo then
+  begin
+    idx := Random(lista.Count);
+    NovoX := lista.Coords[idx].X;
+    NovoY := lista.Coords[idx].Y;
+    Result := True;
+  end;
 end;
 
 function TSimulacao.EncontrarPresaMaisProxima(
@@ -1104,12 +1310,13 @@ procedure TSimulacao.ExecutarAcoesCelula(x, y: Integer);
 var
   ent, neigh: TSer;
   dx, dy, nx, ny, viz, carnNearby, bactCount, toxicBactCount: Integer;
-  Raio, AlvoX, AlvoY, Dist: Integer;
-  eaten, hasMoved, MorreuEnvenenado: Boolean;
+  eaten, hasMoved, MorreuEnvenenado, foundTarget: Boolean;
   NovoX, NovoY: Integer;
-  reproCfg: TReproducaoConfig;
+  movNoCiclo, curX, curY, stepX, stepY: Integer;
+  alvoX, alvoY, dirX, dirY, distAlvo: Integer;
+  idx, bestIdx, bestDist: Integer;
   lista: TListaCoordenadas;
-  idx: Integer;
+  reproCfg: TReproducaoConfig;
 begin
   ent := FTabuleiro.GetEntAt(x, y);
   if ent = nil then Exit;
@@ -1196,157 +1403,169 @@ begin
   hasMoved := False;
   NovoX := x;
   NovoY := y;
+  MorreuEnvenenado := False;
   
+  // 4. Movimento orientado a busca de comida (herbívoros e carnívoros)
   if ent.Tipo in [tsVegetariano, tsCarnivoro] then
   begin
-    if ent.Tipo = tsVegetariano then
+    // Verifica limites de movimento
+    if ent.MovimentosRealizados < ent.MovimentosMaximos then
     begin
-      // 1. Fuga do carnívoro
-      Raio := FConfig.RaioBuscaHerbivoro;
-      if EncontrarSerMaisProximo(NovoX, NovoY, tsCarnivoro, Raio, AlvoX, AlvoY) then
-      begin
-        if MoveUmaCasaParaLonge(NovoX, NovoY, AlvoX, AlvoY, nx, ny) then
-        begin
-          NovoX := nx;
-          NovoY := ny;
-          hasMoved := True;
-        end;
-      end;
+      curX := x;
+      curY := y;
+      movNoCiclo := 0;
       
-      // Comer se alimento estiver adjacente na nova posição (sobreviver vem antes de comer)
-      if TentarComer(NovoX, NovoY, ent, MorreuEnvenenado) then
+      while movNoCiclo < FConfig.MovimentoMaximoPorCiclo do
       begin
-        if MorreuEnvenenado then
+        if ent.MovimentosRealizados >= ent.MovimentosMaximos then
+          Break;
+        
+        // Determina o alvo e a direção de movimento
+        stepX := curX;
+        stepY := curY;
+        foundTarget := False;
+        
+        if ent.Tipo = tsVegetariano then
         begin
-          RegistraMorte(ent, tmVeneno);
-          FTabuleiro.FreeCell(x, y);
-          Inc(FMortesPorVeneno);
-          Exit;
-        end;
-        eaten := True;
-      end;
-      
-      // 2. Buscar planta se estiver com fome
-      if (not eaten) and (ent.CiclosSemComida > 0) then
-      begin
-        if EncontrarSerMaisProximo(NovoX, NovoY, tsPlanta, Raio, AlvoX, AlvoY) then
-        begin
-          if MoveUmaCasaEmDirecao(NovoX, NovoY, AlvoX, AlvoY, nx, ny) then
+          // Prioridade 1: Fugir de carnívoro próximo
+          if EncontrarSerMaisProximo(curX, curY, tsCarnivoro, FConfig.RaioBuscaHerbivoro, alvoX, alvoY) then
           begin
-            NovoX := nx;
-            NovoY := ny;
-            hasMoved := True;
-            
-            if TentarComer(NovoX, NovoY, ent, MorreuEnvenenado) then
+            distAlvo := DistanciaChebyshev(curX, curY, alvoX, alvoY);
+            if distAlvo <= 3 then // Fuga só se muito perto
             begin
-              if MorreuEnvenenado then
-              begin
-                RegistraMorte(ent, tmVeneno);
-                FTabuleiro.FreeCell(x, y);
-                Inc(FMortesPorVeneno);
-                Exit;
-              end;
-              eaten := True;
+              // Move na direção oposta ao carnívoro
+              dirX := curX - alvoX;
+              dirY := curY - alvoY;
+              if dirX > 0 then dirX := 1 else if dirX < 0 then dirX := -1;
+              if dirY > 0 then dirY := 1 else if dirY < 0 then dirY := -1;
+              stepX := curX + dirX;
+              stepY := curY + dirY;
+              foundTarget := True;
             end;
           end;
-        end;
-      end;
-      
-      // 3. Se não moveu nem na fuga nem na busca, movimento aleatório opcional como fallback
-      if (not hasMoved) then
-      begin
-        lista := FTabuleiro.ListaVizinhosLivres(NovoX, NovoY);
-        if lista.Count > 0 then
-        begin
-          idx := Random(lista.Count);
-          NovoX := lista.Coords[idx].X;
-          NovoY := lista.Coords[idx].Y;
-          hasMoved := True;
           
-          if TentarComer(NovoX, NovoY, ent, MorreuEnvenenado) then
+          // Prioridade 2: Buscar planta
+          if not foundTarget then
           begin
-            if MorreuEnvenenado then
+            if EncontrarSerMaisProximo(curX, curY, tsPlanta, FConfig.RaioBuscaHerbivoro, alvoX, alvoY) then
             begin
-              RegistraMorte(ent, tmVeneno);
-              FTabuleiro.FreeCell(x, y);
-              Inc(FMortesPorVeneno);
-              Exit;
+              // Já adjacente? Para para comer
+              if DistanciaChebyshev(curX, curY, alvoX, alvoY) <= 1 then
+                Break;
+              // Move um passo na direção da planta
+              dirX := alvoX - curX;
+              dirY := alvoY - curY;
+              if dirX > 0 then dirX := 1 else if dirX < 0 then dirX := -1;
+              if dirY > 0 then dirY := 1 else if dirY < 0 then dirY := -1;
+              stepX := curX + dirX;
+              stepY := curY + dirY;
+              foundTarget := True;
             end;
-            eaten := True;
           end;
-        end;
-      end;
-      
-      // Grava no tabuleiro final
-      if hasMoved then
-        FTabuleiro.CopyCellToNext(x, y, NovoX, NovoY);
-    end
-    else if ent.Tipo = tsCarnivoro then
-    begin
-      Raio := FConfig.RaioBuscaCarnivoro;
-      if EncontrarSerMaisProximo(NovoX, NovoY, tsVegetariano, Raio, AlvoX, AlvoY) then
-      begin
-        // Determina o máximo de deslocamento (2 para faminto, 1 para alimentado)
-        if ent.CiclosSemComida > 0 then
-          Dist := 2
-        else
-          Dist := 1;
-          
-        // Passo 1
-        if DistanciaChebyshev(NovoX, NovoY, AlvoX, AlvoY) > 1 then
+        end
+        else if ent.Tipo = tsCarnivoro then
         begin
-          if MoveUmaCasaEmDirecao(NovoX, NovoY, AlvoX, AlvoY, nx, ny) then
+          // Buscar presa (herbívoro ou carnívoro menor)
+          if EncontrarPresaMaisProxima(curX, curY, ent, FConfig.RaioBuscaCarnivoro, alvoX, alvoY) then
           begin
-            NovoX := nx;
-            NovoY := ny;
-            hasMoved := True;
+            // Já adjacente? Para para comer
+            if DistanciaChebyshev(curX, curY, alvoX, alvoY) <= 1 then
+              Break;
+            // Move um passo na direção da presa
+            dirX := alvoX - curX;
+            dirY := alvoY - curY;
+            if dirX > 0 then dirX := 1 else if dirX < 0 then dirX := -1;
+            if dirY > 0 then dirY := 1 else if dirY < 0 then dirY := -1;
+            stepX := curX + dirX;
+            stepY := curY + dirY;
+            foundTarget := True;
           end;
         end;
         
-        // Passo 2
-        if (Dist = 2) and (DistanciaChebyshev(NovoX, NovoY, AlvoX, AlvoY) > 1) then
+        // Sem alvo: chance aleatória de exploração (10%)
+        if not foundTarget then
         begin
-          if MoveUmaCasaEmDirecao(NovoX, NovoY, AlvoX, AlvoY, nx, ny) then
+          if Random < FConfig.ChanceMovimentoAleatorioSemAlvo then
           begin
-            NovoX := nx;
-            NovoY := ny;
-            hasMoved := True;
+            lista := FTabuleiro.ListaVizinhosLivres(curX, curY);
+            if lista.Count > 0 then
+            begin
+              EmbaralhaCoordenadas(lista);
+              stepX := lista.Coords[0].X;
+              stepY := lista.Coords[0].Y;
+              foundTarget := True;
+            end;
           end;
+          if not foundTarget then
+            Break; // Nada a fazer, para de mover
         end;
         
-        // Se ficou adjacente ao final do movimento, tenta comer
-        if DistanciaChebyshev(NovoX, NovoY, AlvoX, AlvoY) <= 1 then
+        // Verifica se a célula destino está livre
+        if not FTabuleiro.InBounds(stepX, stepY) then
+          Break;
+        if not FTabuleiro.IsCellEmptyBoth(stepX, stepY) then
         begin
-          if TentarComer(NovoX, NovoY, ent, MorreuEnvenenado) then
-            eaten := True;
+          // Tenta desviar: busca vizinho livre mais próximo do alvo
+          lista := FTabuleiro.ListaVizinhosLivres(curX, curY);
+          if lista.Count = 0 then
+            Break;
+          EmbaralhaCoordenadas(lista);
+          bestDist := MaxInt;
+          bestIdx := -1;
+          for idx := 0 to lista.Count - 1 do
+          begin
+            distAlvo := DistanciaChebyshev(lista.Coords[idx].X, lista.Coords[idx].Y, alvoX, alvoY);
+            if distAlvo < bestDist then
+            begin
+              bestDist := distAlvo;
+              bestIdx := idx;
+            end;
+          end;
+          if bestIdx < 0 then
+            Break;
+          // Só move se realmente se aproxima do alvo
+          if bestDist >= DistanciaChebyshev(curX, curY, alvoX, alvoY) then
+            Break;
+          stepX := lista.Coords[bestIdx].X;
+          stepY := lista.Coords[bestIdx].Y;
         end;
+        
+        // Efetua o movimento
+        curX := stepX;
+        curY := stepY;
+        hasMoved := True;
+        Inc(movNoCiclo);
+        ent.MovimentosRealizados := ent.MovimentosRealizados + 1;
       end;
       
-      // Se não encontrou herbívoro ou não se moveu, faz movimento aleatório opcional
-      if (not hasMoved) then
-      begin
-        lista := FTabuleiro.ListaVizinhosLivres(NovoX, NovoY);
-        if lista.Count > 0 then
-        begin
-          idx := Random(lista.Count);
-          NovoX := lista.Coords[idx].X;
-          NovoY := lista.Coords[idx].Y;
-          hasMoved := True;
-          
-          if TentarComer(NovoX, NovoY, ent, MorreuEnvenenado) then
-            eaten := True;
-        end;
-      end;
-      
-      // Grava no tabuleiro final
-      if hasMoved then
-        FTabuleiro.CopyCellToNext(x, y, NovoX, NovoY);
+      NovoX := curX;
+      NovoY := curY;
     end;
   end;
   
-  if not hasMoved then
-  begin
+  // 5. Copiar célula para a posição final
+  if hasMoved then
+    FTabuleiro.CopyCellToNext(x, y, NovoX, NovoY)
+  else
     FTabuleiro.CopyCellToNext(x, y, x, y);
+
+  // 6. Tentar comer após o movimento
+  if ent.Tipo in [tsVegetariano, tsCarnivoro] then
+  begin
+    if TentarComer(NovoX, NovoY, ent, MorreuEnvenenado) then
+      eaten := True;
+
+    // Tratar morte por envenenamento
+    if MorreuEnvenenado then
+    begin
+      RegistraMorte(ent, tmVeneno);
+      if hasMoved then
+        FTabuleiro.FreeCellNext(NovoX, NovoY)
+      else
+        FTabuleiro.FreeCell(x, y);
+      Inc(FMortesPorVeneno);
+      Exit;
+    end;
   end;
   
   // 7. Atualizar fome

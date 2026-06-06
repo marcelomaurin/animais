@@ -111,6 +111,10 @@ type
     // Configurações de Mutualismo (Seção 8.3)
     BonusMutualismo: Double;
     MaxBonusMutualismo: Double;
+    
+    // Configurações de Movimento por ciclo
+    MovimentoMaximoPorCiclo: Integer;
+    ChanceMovimentoAleatorioSemAlvo: Double;
   end;
 
 function ObterConfigPadrao: TSimulacaoConfig;
@@ -247,6 +251,10 @@ begin
   // Configuração de Mutualismo (Seção 8.3)
   Result.BonusMutualismo := 0.10;
   Result.MaxBonusMutualismo := 0.20;
+  
+  // Configuração de Movimento por ciclo
+  Result.MovimentoMaximoPorCiclo := 10;
+  Result.ChanceMovimentoAleatorioSemAlvo := 0.10;
 end;
 
 end.

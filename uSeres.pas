@@ -27,11 +27,16 @@ type
     
     // Pontos de Matéria Orgânica (Seção 7)
     FPontos: Integer;
+    // Movement tracking (new fields)
+    FMovimentosRealizados: Integer;
+    FMovimentosMaximos: Integer;
   public
     constructor Create(ATipo: TTipoSer; ALife, ARepro: Integer); virtual;
     procedure ResetCounters; inline;
     
     property Tipo: TTipoSer read FTipo;
+    property MovimentosRealizados: Integer read FMovimentosRealizados write FMovimentosRealizados;
+    property MovimentosMaximos: Integer read FMovimentosMaximos write FMovimentosMaximos;
     property CicloVidaMax: Integer read FCicloVidaMax write FCicloVidaMax;
     property CicloReproMax: Integer read FCicloReproMax write FCicloReproMax;
     property CicloVidaAtual: Integer read FCicloVidaAtual write FCicloVidaAtual;
@@ -160,6 +165,9 @@ begin
   FResistenciaVeneno := rvNenhuma;
   FResistenciaToxina := rtNenhuma;
   FPontos := 0;
+  // Initialize movement counters
+  FMovimentosRealizados := 0;
+  FMovimentosMaximos := 0;
 end;
 
 procedure TSer.ResetCounters;
@@ -188,6 +196,9 @@ end;
 constructor TVegetariano.Create(ATipo: TTipoSer; ALife, ARepro: Integer);
 begin
   inherited Create(tsVegetariano, ALife, ARepro);
+  // Set movement limits for herbivore
+  MovimentosRealizados := 0;
+  MovimentosMaximos := FCicloVidaMax * 10;
 end;
 
 { ======== TCarnivoro ======== }
@@ -195,6 +206,9 @@ end;
 constructor TCarnivoro.Create(ATipo: TTipoSer; ALife, ARepro: Integer);
 begin
   inherited Create(tsCarnivoro, ALife, ARepro);
+  // Set movement limits for carnivore
+  MovimentosRealizados := 0;
+  MovimentosMaximos := FCicloVidaMax * 10;
 end;
 
 { ======== TMateriaOrganica ======== }
