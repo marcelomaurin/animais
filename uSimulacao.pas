@@ -84,6 +84,9 @@ type
     function MoveUmaCasaParaLonge(XAtual, YAtual: Integer; XPerigo, YPerigo: Integer; out NovoX, NovoY: Integer): Boolean;
     function EncontrarSerMaisProximo(X, Y: Integer; ATipo: TTipoSer; ARaio: Integer; out AlvoX, AlvoY: Integer): Boolean;
     function TentarComer(X, Y: Integer; ASer: TSer; out MorreuEnvenenado: Boolean): Boolean;
+    function ObterPontosMateriaOrganica(ASer: TSer): Integer;
+    procedure SpawnMateriaOrganica(X, Y, APontos: Integer);
+    function CalcularBonusMutualismo(X, Y: Integer; ASer: TSer): Double;
   public
     constructor Create;
     destructor Destroy; override;
@@ -683,6 +686,96 @@ begin
       Result := True;
     end;
   end;
+end;
+
+function TSimulacao.ObterPontosMateriaOrganica(ASer: TSer): Integer;
+begin
+  Result := 0;
+  if ASer = nil then Exit;
+  
+  if ASer.Tipo = tsBacteria then
+    Result := 0
+  else
+  begin
+    case ASer.Tamanho of
+      taPequeno: Result := 1;
+      taMedio:   Result := 2;
+      taGrande:  Result := 3;
+      else Result := 1;
+    end;
+  end;
+end;
+
+procedure TSimulacao.SpawnMateriaOrganica(X, Y, APontos: Integer);
+var
+  ent: TSer;
+begin
+  if FTabuleiro.InBounds(X, Y) and (APontos > 0) then
+  begin
+    FTabuleiro.ConsumeCell(X, Y);
+    FTabuleiro.SpawnCellToNext(tsMateriaOrganica, X, Y, 0, 0);
+    ent := FTabuleiro.GetEntNextAt(X, Y);
+    if ent <> nil then
+    begin
+      ent.Pontos := APontos;
+    end;
+  end;
+end;
+
+function TSimulacao.CalcularBonusMutualismo(X, Y: Integer; ASer: TSer): Double;
+var
+  bonus: Double;
+  dir, nx, ny: Integer;
+  neigh: TSer;
+begin
+  Result := 0.0;
+  if ASer = nil then Exit;
+  
+  bonus := 0.0;
+  
+  for dir := 0 to 3 do
+  begin
+    case dir of
+      0: begin nx := X; ny := Y - 1; end; // acima
+      1: begin nx := X; ny := Y + 1; end; // abaixo
+      2: begin nx := X - 1; ny := Y; end; // esquerda
+      3: begin nx := X + 1; ny := Y; end; // direita
+    end;
+    
+    if FTabuleiro.InBounds(nx, ny) then
+    begin
+      neigh := FTabuleiro.GetEntAt(nx, ny);
+      if neigh <> nil then
+      begin
+        case ASer.Tipo of
+          tsPlanta:
+          begin
+            if (neigh.Tipo = tsBacteria) and (neigh.Toxicidade = txNenhuma) then
+              bonus := bonus + FConfig.BonusMutualismo;
+            if neigh.Tipo = tsCarnivoro then
+              bonus := bonus + FConfig.BonusMutualismo;
+          end;
+          
+          tsBacteria:
+          begin
+            if ASer.Toxicidade = txNenhuma then
+            begin
+              if neigh.Tipo = tsPlanta then
+                bonus := bonus + FConfig.BonusMutualismo;
+              if neigh.Tipo = tsVegetariano then
+                bonus := bonus + FConfig.BonusMutualismo;
+              if neigh.Tipo = tsCarnivoro then
+                bonus := bonus + FConfig.BonusMutualismo;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  if bonus > FConfig.MaxBonusMutualismo then
+    bonus := FConfig.MaxBonusMutualismo;
+  Result := bonus;
 end;
 
 function TSimulacao.ObterChanceMutacao(ATipo: TTipoSer): Double;

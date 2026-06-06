@@ -8,7 +8,7 @@ uses
   Graphics;
 
 type
-  TTipoSer = (tsNone, tsBacteria, tsPlanta, tsVegetariano, tsCarnivoro);
+  TTipoSer = (tsNone, tsBacteria, tsPlanta, tsVegetariano, tsCarnivoro, tsMateriaOrganica);
   
   // Variações e características evolutivas (Seção 22.4)
   TTamanhoAnimal = (taPequeno, taMedio, taGrande);
@@ -47,6 +47,7 @@ const
   VAL_COLOR_PLANTA = $00FF00;
   VAL_COLOR_VEGETARIANO = $0000FF;
   VAL_COLOR_CARNIVORO = $FF0000;
+  VAL_COLOR_MATERIA_ORGANICA = $1A4B75;
 
 type
   TReproducaoConfig = record
@@ -103,6 +104,13 @@ type
     // Raio de busca para comportamento direcionado
     RaioBuscaHerbivoro: Integer;
     RaioBuscaCarnivoro: Integer;
+    
+    // Configurações de Matéria Orgânica (Seção 7.3)
+    IntervaloDegradacaoMateriaOrganica: Integer;
+    
+    // Configurações de Mutualismo (Seção 8.3)
+    BonusMutualismo: Double;
+    MaxBonusMutualismo: Double;
   end;
 
 function ObterConfigPadrao: TSimulacaoConfig;
@@ -232,6 +240,13 @@ begin
   // Raio de busca padrão (Seção 4.1)
   Result.RaioBuscaHerbivoro := 5;
   Result.RaioBuscaCarnivoro := 7;
+  
+  // Configuração de Matéria Orgânica (Seção 7.3)
+  Result.IntervaloDegradacaoMateriaOrganica := 3;
+  
+  // Configuração de Mutualismo (Seção 8.3)
+  Result.BonusMutualismo := 0.10;
+  Result.MaxBonusMutualismo := 0.20;
 end;
 
 end.

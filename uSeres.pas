@@ -24,6 +24,9 @@ type
     FToxicidade: TToxicidade;
     FResistenciaVeneno: TResistenciaVeneno;
     FResistenciaToxina: TResistenciaToxina;
+    
+    // Pontos de Matéria Orgânica (Seção 7)
+    FPontos: Integer;
   public
     constructor Create(ATipo: TTipoSer; ALife, ARepro: Integer); virtual;
     procedure ResetCounters; inline;
@@ -42,6 +45,7 @@ type
     property Toxicidade: TToxicidade read FToxicidade write FToxicidade;
     property ResistenciaVeneno: TResistenciaVeneno read FResistenciaVeneno write FResistenciaVeneno;
     property ResistenciaToxina: TResistenciaToxina read FResistenciaToxina write FResistenciaToxina;
+    property Pontos: Integer read FPontos write FPontos;
   end;
 
   TBacteria = class(TSer)
@@ -60,6 +64,11 @@ type
   end;
 
   TCarnivoro = class(TSer)
+  public
+    constructor Create(ATipo: TTipoSer; ALife, ARepro: Integer); override;
+  end;
+
+  TMateriaOrganica = class(TSer)
   public
     constructor Create(ATipo: TTipoSer; ALife, ARepro: Integer); override;
   end;
@@ -123,6 +132,11 @@ begin
       end;
     end;
     
+    tsMateriaOrganica:
+    begin
+      Result := 'Matéria Orgânica';
+    end;
+    
     else
       Result := 'Desconhecido';
   end;
@@ -145,6 +159,7 @@ begin
   FToxicidade := txNenhuma;
   FResistenciaVeneno := rvNenhuma;
   FResistenciaToxina := rtNenhuma;
+  FPontos := 0;
 end;
 
 procedure TSer.ResetCounters;
@@ -182,6 +197,13 @@ begin
   inherited Create(tsCarnivoro, ALife, ARepro);
 end;
 
+{ ======== TMateriaOrganica ======== }
+
+constructor TMateriaOrganica.Create(ATipo: TTipoSer; ALife, ARepro: Integer);
+begin
+  inherited Create(tsMateriaOrganica, ALife, ARepro);
+end;
+
 { ======== Factory ======== }
 
 function CriarSerPorTipo(ATipo: TTipoSer; ALifeMax, AReproMax: Integer): TSer;
@@ -191,6 +213,7 @@ begin
     tsPlanta: Result := TPlanta.Create(tsPlanta, ALifeMax, AReproMax);
     tsVegetariano: Result := TVegetariano.Create(tsVegetariano, ALifeMax, AReproMax);
     tsCarnivoro: Result := TCarnivoro.Create(tsCarnivoro, ALifeMax, AReproMax);
+    tsMateriaOrganica: Result := TMateriaOrganica.Create(tsMateriaOrganica, ALifeMax, AReproMax);
     else Result := nil;
   end;
 end;

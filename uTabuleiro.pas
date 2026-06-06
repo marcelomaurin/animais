@@ -38,6 +38,7 @@ type
     function InBounds(x, y: Integer): Boolean; inline;
     function GetTipoAt(x, y: Integer): TTipoSer; inline;
     function GetEntAt(x, y: Integer): TSer; inline;
+    function GetEntNextAt(x, y: Integer): TSer; inline;
     function IsCellEmptyBoth(x, y: Integer): Boolean; inline;
     
     function GetEmptyNeighborsBoth(x, y: Integer; out AEmpty: array of TPoint; out ACount: Integer): Boolean; deprecated;
@@ -164,6 +165,14 @@ function TTabuleiro.GetEntAt(x, y: Integer): TSer;
 begin
   if InBounds(x, y) then
     Result := FBoard[x, y].Ent
+  else
+    Result := nil;
+end;
+
+function TTabuleiro.GetEntNextAt(x, y: Integer): TSer;
+begin
+  if InBounds(x, y) then
+    Result := FNextBoard[x, y].Ent
   else
     Result := nil;
 end;
