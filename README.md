@@ -1,11 +1,11 @@
-# Animais — Jogo da Vida Modificado
+# Animais - Jogo da Vida Modificado
 
-[Português](#português-do-brasil) | [English](#english) | [Español](#español) | [Français](#français) | [中文](#中文-简体) | [العربية](#العربية) | [हिन्दी](#हिन्दी)
+[PT-BR](#pt-br) | [EN](#en) | [ES](#es) | [FR](#fr) | [ZH](#zh) | [AR](#ar) | [HI](#hi)
 
 ---
 
-## Português do Brasil
+## PT-BR
 
-**Animais** é uma simulação visual desenvolvida em **Lazarus / Free Pascal**, inspirada no clássico **Jogo da Vida**, mas modificada para representar um pequeno ecossistema evolutivo.
+**Animais** e uma simulacao visual criada em **Lazarus / Free Pascal**. O projeto e inspirado no classico **Jogo da Vida**, mas foi modificado para representar um pequeno ecossistema evolutivo.
 
-No Jogo da Vida
+No Jogo da Vida tradicional, uma celula esta viva ou morta. Neste projeto, uma celula pode conter planta, bacteria, herbivoro
