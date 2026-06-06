@@ -84,6 +84,12 @@ type
     chartEvolucao: TChart;
     seriesEvolucao: TLineSeries;
     grdEvolucaoDados: TStringGrid;
+    
+    // Botões de Implantação
+    btnImplantarHerb: TButton;
+    btnImplantarCarn: TButton;
+    procedure btnImplantarHerbClick(Sender: TObject);
+    procedure btnImplantarCarnClick(Sender: TObject);
 
     procedure Desenha;
     procedure AtualizarStats;
@@ -132,7 +138,7 @@ begin
   pnlButtons := TPanel.Create(Self);
   pnlButtons.Parent := pnlSidebar;
   pnlButtons.Align := alBottom;
-  pnlButtons.Height := 135;
+  pnlButtons.Height := 175;
   pnlButtons.Color := pnlSidebar.Color;
   pnlButtons.BevelOuter := bvNone;
   
@@ -154,6 +160,19 @@ begin
   btnExport.SetBounds(290, 50, 130, 30);
   
   btnAbout.SetBounds(10, 90, 410, 30);
+  
+  // Create Deploy Buttons
+  btnImplantarHerb := TButton.Create(Self);
+  btnImplantarHerb.Parent := pnlButtons;
+  btnImplantarHerb.Caption := 'Implantar Herb. P. Comum';
+  btnImplantarHerb.SetBounds(10, 130, 200, 30);
+  btnImplantarHerb.OnClick := @btnImplantarHerbClick;
+  
+  btnImplantarCarn := TButton.Create(Self);
+  btnImplantarCarn.Parent := pnlButtons;
+  btnImplantarCarn.Caption := 'Implantar Carn. Pequeno';
+  btnImplantarCarn.SetBounds(220, 130, 200, 30);
+  btnImplantarCarn.OnClick := @btnImplantarCarnClick;
   
   // Create TPageControl
   pgcStats := TPageControl.Create(Self);
@@ -848,9 +867,43 @@ begin
     btnPause.Enabled := False;
     btnStop.Enabled := False;
     btnRestart.Enabled := False;
-    btnConfig.Enabled := True;
-    btnExport.Enabled := False;
   end;
+end;
+
+procedure TForm2.btnImplantarHerbClick(Sender: TObject);
+begin
+  FSimulacao.Tabuleiro.ColocaSerAleatorio(
+    tsVegetariano,
+    5,
+    LIFE_VEGETARIANO,
+    REPRO_VEGETARIANO,
+    uTiposAnimais.tsNone,
+    uTiposAnimais.tsNone,
+    taPequeno,
+    txNenhuma,
+    rvNenhuma,
+    rtNenhuma
+  );
+  Desenha;
+  AtualizarStats;
+end;
+
+procedure TForm2.btnImplantarCarnClick(Sender: TObject);
+begin
+  FSimulacao.Tabuleiro.ColocaSerAleatorio(
+    tsCarnivoro,
+    5,
+    LIFE_CARNIVORO,
+    REPRO_CARNIVORO,
+    uTiposAnimais.tsNone,
+    uTiposAnimais.tsNone,
+    taPequeno,
+    txNenhuma,
+    rvNenhuma,
+    rtNenhuma
+  );
+  Desenha;
+  AtualizarStats;
 end;
 
 end.
