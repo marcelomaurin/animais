@@ -1,0 +1,13 @@
+lib/
+backup/
+*.o
+*.ppu
+*.compiled
+*.bak
+*.tmp
+*.lps
+*.dbg
+*.or
+*.res
+animal.exe
+animal.dbg

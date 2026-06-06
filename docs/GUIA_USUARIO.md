@@ -1,123 +1,95 @@
-# Guia do Usuário — Animais
+# Guia do Usuário — Animais / Jogo da Vida Evoluído
 
-Este guia explica como usar o projeto **Animais**, uma simulação visual inspirada no Jogo da Vida, criada em Lazarus / Free Pascal.
-
----
-
-## O que é o Animais?
-
-O **Animais** é uma simulação de ecossistema em que um grande tabuleiro representa um ambiente vivo.
-
-Cada ponto do tabuleiro pode estar vazio ou conter um dos seguintes seres:
-
-- bactéria;
-- planta;
-- animal vegetariano;
-- animal carnívoro.
-
-A cada ciclo, o sistema recalcula o estado do ambiente. Os seres podem nascer, se reproduzir, se mover ou morrer conforme regras simples.
+Este guia explica como utilizar a aplicação **Animais — Jogo da Vida Evoluído**, fornecendo instruções de uso dos novos controles, visualização de estatísticas e configuração da simulação.
 
 ---
 
-## Cores da simulação
+## O que é a Simulação?
 
-| Cor | Significado |
-|---|---|
-| Amarelo | Bactéria |
-| Verde | Planta |
-| Azul | Vegetariano |
-| Vermelho | Carnívoro |
-| Preto | Espaço vazio |
+A simulação representa um ecossistema dinâmico onde seres de diferentes espécies coexistem em uma grade espacial (tabuleiro). Cada ser possui regras biológicas simples de sobrevivência, movimento e reprodução, mas a sua interação coletiva produz comportamentos ecológicos emergentes e padrões visuais complexos.
 
----
-
-## Controles da tela
-
-### Iniciar
-
-Começa a execução da simulação.
-
-Quando o temporizador está ativo, o programa avança ciclo por ciclo e redesenha o tabuleiro.
-
-### Pausar
-
-Alterna entre pausado e em execução.
-
-Use este botão para congelar a simulação e observar o estado atual do ecossistema.
-
-### Parar
-
-Para a execução e reinicia o tabuleiro.
-
-Ao parar, o estado anterior é perdido e um novo tabuleiro é criado.
+### Identificação Visual (Cores e Subespécies)
+- ⬛ **Preto**: Célula vazia.
+- 🟡 **Amarelo**: **Bactéria não tóxica** (comum).
+- 🟪 **Roxo**: **Bactéria tóxica** (mutada, envelhece plantas).
+- 🟢 **Verde brilhante**: **Planta comum**.
+- 🌲 **Verde escuro**: **Planta venenosa** (mata herbívoros não resistentes).
+- 🌿 **Verde claro**: **Planta resistente à toxina bacteriana**.
+- 🔵 **Azul**: **Herbívoro comum**.
+- 🌐 **Ciano**: **Herbívoro resistente a veneno**.
+- 🔴 **Vermelho**: **Carnívoro médio** (comum).
+- 💮 **Vermelho claro**: **Carnívoro pequeno**.
+- 🩸 **Vermelho escuro**: **Carnívoro grande**.
 
 ---
 
-## Como interpretar a evolução
+## Estrutura da Interface
 
-No início, o tabuleiro é preenchido com bactérias.
+A tela principal do sistema está dividida em duas áreas fundamentais:
+1. **Área de Visualização (Esquerda)**: Renderiza o tabuleiro da simulação em tempo real, dimensionando-se automaticamente ao tamanho configurado.
+2. **Painel de Controle e Estatísticas (Direita)**: Uma barra lateral contendo o painel de abas de estatísticas e a área inferior de botões.
 
-Depois, o sistema introduz outras espécies em ciclos específicos:
+### Abas de Biodiversidade e Evolução
 
-- ciclo 100: aparece uma planta;
-- ciclo 200: aparece um vegetariano;
-- ciclo 300: aparece um carnívoro.
+O painel de estatísticas está organizado em 5 abas:
 
-A partir daí, a simulação passa a evoluir conforme as regras programadas.
+#### 1. Aba "Resumo"
+Exibe uma visão geral e de alto nível do ecossistema:
+- Ciclo atual, FPS e tempo de processamento.
+- Contagem por espécie e as variações ativas.
+- Total de espécies e subespécies vivas, extintas e mortes acumuladas.
 
----
+#### 2. Aba "Vivos"
+Uma tabela listando as 15 subespécies possíveis e a quantidade de indivíduos vivos em tempo real. Subespécies em risco de extinção (com população entre 1 e 3 indivíduos) aparecem **destacadas em amarelo**.
 
-## O que observar
+#### 3. Aba "Mortos"
+Exibe o acumulado histórico de mortes por subespécie e uma tabela lateral com a distribuição das causas de mortes (Fome, Idade, Predação, Veneno, Toxina, Aleatória, Conflito).
 
-Durante a execução, observe:
+#### 4. Aba "Extintos"
+Tabela que lista subespécies que já existiram na simulação mas que no momento possuem 0 indivíduos vivos. Exibe o nome da subespécie e o ciclo exato em que ocorreu sua extinção. Aparecem **destacadas em cinza/vermelho**.
 
-- se as bactérias dominam rapidamente o tabuleiro;
-- se plantas conseguem se expandir;
-- se vegetarianos encontram alimento;
-- se carnívoros conseguem sobreviver;
-- se alguma espécie desaparece completamente;
-- como pequenas regras geram padrões complexos.
-
----
-
-## Requisitos para executar
-
-Para abrir e compilar o projeto, é necessário ter:
-
-- Lazarus IDE instalada;
-- Free Pascal Compiler instalado;
-- sistema operacional com interface gráfica.
+#### 5. Aba "Evolução"
+Permite acompanhar graficamente o histórico de uma subespécie específica:
+1. Selecione o **Tipo Principal** (Bactéria, Planta, Herbívoro, Carnívoro) no primeiro ComboBox.
+2. Selecione a **Subespécie** desejada no segundo ComboBox.
+3. Clique em **Atualizar** para carregar a curva de evolução populacional no gráfico (eixo X = Ciclos, eixo Y = Indivíduos vivos) e na tabela de dados adjacente.
+4. Se a subespécie estiver extinta, o título do gráfico exibirá o ciclo da extinção.
+5. Clique em **Exportar** para salvar o histórico da subespécie selecionada no arquivo `docs/historico_subespecie.csv`.
 
 ---
 
-## Possíveis problemas
+## Controles de Ação
 
-### O botão não funciona
-
-Se os botões não responderem, verifique no Lazarus se os eventos estão ligados corretamente:
-
-- `btnStartClick`
-- `btnPauseClick`
-- `btnStopClick`
-
-Na análise atual, o arquivo `.lfm` não mostra claramente os eventos `OnClick` associados aos botões.
-
-### A tela abre com nome Form2
-
-O arquivo visual `unit1.lfm` declara `Form2: TForm2`, enquanto o código Pascal declara `TForm1`. Isso deve ser corrigido no Lazarus para evitar inconsistência.
-
-### A simulação fica pesada
-
-O tabuleiro possui 1000x1000 células, totalizando 1 milhão de posições. Em computadores mais simples, a simulação pode consumir bastante processamento.
+Os botões habilitam-se de acordo com o estado da simulação para evitar inconsistências:
+- **Iniciar / Continuar**: Inicia a simulação ou retoma a execução a partir do estado pausado.
+- **Pausar**: Congela temporariamente a simulação. Permite analisar as populações e habilita a exportação de dados.
+- **Parar**: Interrompe a simulação e limpa o tabuleiro de volta ao estado inicial vazio.
+- **Reiniciar**: Zera a simulação atual e inicia uma nova execução imediatamente usando as configurações vigentes.
+- **Configurações**: Abre a tela de parâmetros (somente quando a simulação estiver parada).
+- **Exportar CSV**: Salva o histórico populacional (disponível quando pausado).
+- **Sobre**: Informações de autoria e versão do software.
 
 ---
 
-## Dicas de uso
+## Configurando a Simulação
 
-Para testes rápidos, uma melhoria futura recomendada é permitir alterar o tamanho do tabuleiro, por exemplo:
+Clicando em **Configurações** (com a simulação parada), você pode ajustar os seguintes parâmetros:
+- **Largura e Altura**: O tamanho da grade de simulação.
+- **Intervalo do Timer (ms)**: A velocidade da simulação.
+- **Bactérias Iniciais (%)**: A densidade inicial de bactérias no tabuleiro ao iniciar.
+- **Entrada e Quantidade das Espécies**: Parâmetros de introdução programada para Plantas, Vegetarianos e Carnívoros.
+- **Limite Fome**: Limites de sobrevivência sem comida para Vegetarianos e Carnívoros.
+- **Intervalo e Limite de Histórico**: Controla a taxa de amostragem do histórico (ex: registrar a cada ciclo ou a cada N ciclos) e o número máximo de pontos mantidos na memória (padrão de 10.000 para evitar lentidão ou consumo excessivo de RAM).
+- **Seed Aleatória**: Semente do gerador de números aleatórios.
 
-- 100x100 para testes rápidos;
-- 300x300 para simulação média;
-- 1000x1000 para simulação completa.
+---
 
-Atualmente, o tamanho está fixo no código.
+## Exportando Dados Populacionais
+
+Ao pausar a simulação e clicar em **Exportar CSV**, o sistema gera dois arquivos de relatório na pasta `docs`:
+
+1. **`exemplo_saida.csv`**: Histórico populacional geral, contendo as populações das espécies principais, contadores específicos de subtipos (tamanho, toxicidade, etc.) e as métricas de biodiversidade de espécies/subespécies vivas, extintas e causas de morte.
+2. **`biodiversidade.csv`**: Relatório detalhado por subespécie contendo a série temporal de indivíduos vivos, mortos e se está extinta em cada ciclo.
+
+Ambos os relatórios utilizam separadores de vírgula e formato numérico com ponto decimal, ideal para importação e análise em planilhas eletrônicas.
+

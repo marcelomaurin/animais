@@ -1,63 +1,223 @@
 object Form2: TForm2
-  Left = 256
-  Height = 479
-  Top = 145
-  Width = 728
-  Caption = 'Form2'
-  ClientHeight = 479
-  ClientWidth = 728
-  LCLVersion = '4.0.0.4'
+  Left = 250
+  Height = 600
+  Top = 100
+  Width = 1150
+  Caption = 'Animais — Jogo da Vida Evoluído'
+  ClientHeight = 600
+  ClientWidth = 1150
   OnCreate = FormCreate
   object imgBoard: TImage
     Left = 0
-    Height = 400
+    Height = 600
     Top = 0
-    Width = 728
+    Width = 700
     Align = alClient
     Stretch = True
   end
-  object Panel1: TPanel
-    Left = 0
-    Height = 79
-    Top = 400
-    Width = 728
-    Align = alBottom
-    ClientHeight = 79
-    ClientWidth = 728
+  object pnlSidebar: TPanel
+    Left = 700
+    Height = 600
+    Top = 0
+    Width = 450
+    Align = alRight
+    BevelOuter = bvNone
+    Color = 3026478
+    ParentColor = False
     TabOrder = 0
+    object lblStatsHeader: TLabel
+      Left = 10
+      Height = 21
+      Top = 15
+      Width = 240
+      Alignment = taCenter
+      AutoSize = False
+      Caption = 'ESTATÍSTICAS DA SIMULAÇÃO'
+      Font.CharSet = ANSI_CHARSET
+      Font.Color = clWhite
+      Font.Height = -13
+      Font.Name = 'Segoe UI'
+      Font.Style = [fsBold]
+      ParentColor = False
+      ParentFont = False
+    end
+    object lblCycle: TLabel
+      Left = 20
+      Height = 20
+      Top = 50
+      Width = 220
+      AutoSize = False
+      Caption = 'Ciclo: 0'
+      Font.Color = 14211288
+      Font.Height = -12
+      Font.Name = 'Segoe UI'
+      ParentColor = False
+      ParentFont = False
+    end
+    object lblBacterias: TLabel
+      Left = 20
+      Height = 20
+      Top = 80
+      Width = 220
+      AutoSize = False
+      Caption = 'Bactérias: 0'
+      Font.Color = 65535
+      Font.Height = -12
+      Font.Name = 'Segoe UI'
+      Font.Style = [fsBold]
+      ParentColor = False
+      ParentFont = False
+    end
+    object lblPlantas: TLabel
+      Left = 20
+      Height = 20
+      Top = 110
+      Width = 220
+      AutoSize = False
+      Caption = 'Plantas: 0'
+      Font.Color = 65280
+      Font.Height = -12
+      Font.Name = 'Segoe UI'
+      Font.Style = [fsBold]
+      ParentColor = False
+      ParentFont = False
+    end
+    object lblVegetarianos: TLabel
+      Left = 20
+      Height = 20
+      Top = 140
+      Width = 220
+      AutoSize = False
+      Caption = 'Vegetarianos: 0'
+      Font.Color = 16711680
+      Font.Height = -12
+      Font.Name = 'Segoe UI'
+      Font.Style = [fsBold]
+      ParentColor = False
+      ParentFont = False
+    end
+    object lblCarnivoros: TLabel
+      Left = 20
+      Height = 20
+      Top = 170
+      Width = 220
+      AutoSize = False
+      Caption = 'Carnívoros: 0'
+      Font.Color = 255
+      Font.Height = -12
+      Font.Name = 'Segoe UI'
+      Font.Style = [fsBold]
+      ParentColor = False
+      ParentFont = False
+    end
+    object lblVazios: TLabel
+      Left = 20
+      Height = 20
+      Top = 200
+      Width = 220
+      AutoSize = False
+      Caption = 'Células Vazias: 0'
+      Font.Color = 10526880
+      Font.Height = -12
+      Font.Name = 'Segoe UI'
+      ParentColor = False
+      ParentFont = False
+    end
+    object lblTimeMs: TLabel
+      Left = 20
+      Height = 20
+      Top = 230
+      Width = 220
+      AutoSize = False
+      Caption = 'Tempo Ciclo: 0.0 ms'
+      Font.Color = 14211288
+      Font.Height = -12
+      Font.Name = 'Segoe UI'
+      ParentColor = False
+      ParentFont = False
+    end
+    object lblFPS: TLabel
+      Left = 20
+      Height = 20
+      Top = 260
+      Width = 220
+      AutoSize = False
+      Caption = 'FPS: 0.0'
+      Font.Color = 14211288
+      Font.Height = -12
+      Font.Name = 'Segoe UI'
+      ParentColor = False
+      ParentFont = False
+    end
     object btnStart: TButton
-      Left = 61
-      Height = 25
-      Top = 30
-      Width = 75
+      Left = 20
+      Height = 30
+      Top = 300
+      Width = 220
       Caption = 'Iniciar'
       TabOrder = 0
       OnClick = btnStartClick
     end
     object btnPause: TButton
-      Left = 166
-      Height = 25
-      Top = 29
-      Width = 75
+      Left = 20
+      Height = 30
+      Top = 340
+      Width = 220
       Caption = 'Pausar'
       TabOrder = 1
       OnClick = btnPauseClick
     end
     object btnStop: TButton
-      Left = 271
-      Height = 25
-      Top = 30
-      Width = 75
+      Left = 20
+      Height = 30
+      Top = 380
+      Width = 220
       Caption = 'Parar'
       TabOrder = 2
       OnClick = btnStopClick
+    end
+    object btnRestart: TButton
+      Left = 20
+      Height = 30
+      Top = 420
+      Width = 220
+      Caption = 'Reiniciar'
+      TabOrder = 3
+      OnClick = btnRestartClick
+    end
+    object btnConfig: TButton
+      Left = 20
+      Height = 30
+      Top = 460
+      Width = 220
+      Caption = 'Configurações'
+      TabOrder = 4
+      OnClick = btnConfigClick
+    end
+    object btnExport: TButton
+      Left = 20
+      Height = 30
+      Top = 500
+      Width = 220
+      Caption = 'Exportar CSV'
+      TabOrder = 5
+      OnClick = btnExportClick
+    end
+    object btnAbout: TButton
+      Left = 20
+      Height = 30
+      Top = 540
+      Width = 220
+      Caption = 'Sobre'
+      TabOrder = 6
+      OnClick = btnAboutClick
     end
   end
   object tmCycle: TTimer
     Enabled = False
     Interval = 10
     OnTimer = tmCycleTimer
-    Left = 166
-    Top = 70
+    Left = 40
+    Top = 40
   end
 end

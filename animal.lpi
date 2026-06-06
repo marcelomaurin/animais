@@ -26,6 +26,9 @@
     </RunParams>
     <RequiredPackages>
       <Item>
+        <PackageName Value="TAChartLazarusPkg"/>
+      </Item>
+      <Item>
         <PackageName Value="LCL"/>
       </Item>
     </RequiredPackages>
@@ -38,7 +41,42 @@
         <Filename Value="form2.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="Form2"/>
+        <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
+        <UnitName Value="Form2"/>
+      </Unit>
+      <Unit>
+        <Filename Value="uTiposAnimais.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uTiposAnimais"/>
+      </Unit>
+      <Unit>
+        <Filename Value="uSeres.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uSeres"/>
+      </Unit>
+      <Unit>
+        <Filename Value="uTabuleiro.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uTabuleiro"/>
+      </Unit>
+      <Unit>
+        <Filename Value="uSimulacao.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uSimulacao"/>
+      </Unit>
+      <Unit>
+        <Filename Value="uEstatisticas.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uEstatisticas"/>
+      </Unit>
+      <Unit>
+        <Filename Value="uFormConfig.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="frmConfig"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="uFormConfig"/>
       </Unit>
     </Units>
   </ProjectOptions>

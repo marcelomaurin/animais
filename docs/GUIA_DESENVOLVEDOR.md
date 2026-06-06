@@ -1,366 +1,147 @@
-# Guia do Desenvolvedor — Animais
+# Guia do Desenvolvedor — Animais / Jogo da Vida Evoluído
 
-Este documento descreve a estrutura técnica do projeto **Animais**, com base na análise dos fontes atuais.
-
----
-
-## Visão geral da arquitetura
-
-O projeto é uma aplicação gráfica Lazarus / Free Pascal que simula um ecossistema celular.
-
-O código principal analisado está em:
-
-- `unit1.pas` — lógica da simulação, classes, tabuleiro e interface.
-- `unit1.lfm` — definição visual do formulário.
-- `README.md` — documentação principal.
-
-A aplicação usa:
-
-- `TForm` para a janela principal;
-- `TImage` para renderizar o tabuleiro;
-- `TTimer` para avançar os ciclos;
-- `TButton` para controlar execução;
-- `TBitmap.ScanLine` para desenhar pixels diretamente.
+Este guia detalha a estrutura de software, fluxo geracional de ciclos, regras de concorrência e o design orientado a objetos do projeto **Animais**.
 
 ---
 
-## Constantes principais
+## Arquitetura de Software
 
-```pascal
-const
-  BOARD_W = 1000;
-  BOARD_H = 1000;
-```
+A aplicação foi projetada sob o princípio de separação de responsabilidades. O formulário Lazarus (`Form2`) atua estritamente como um controlador de apresentação e renderizador gráfico, enquanto a lógica computacional do ecossistema reside inteiramente em modelos separados.
 
-Essas constantes definem o tamanho fixo do tabuleiro.
-
-O tabuleiro possui 1.000.000 de células. Isso impacta diretamente memória e desempenho.
-
----
-
-## Tipos principais
-
-```pascal
-TTipoSer = (tsNone, tsBacteria, tsPlanta, tsVegetariano, tsCarnivoro);
-```
-
-Esse enum define os possíveis estados de uma célula.
-
-| Tipo | Descrição |
-|---|---|
-| `tsNone` | célula vazia |
-| `tsBacteria` | bactéria |
-| `tsPlanta` | planta |
-| `tsVegetariano` | animal vegetariano |
-| `tsCarnivoro` | animal carnívoro |
-
----
-
-## Classe base `TSer`
-
-A classe `TSer` representa qualquer ser vivo da simulação.
-
-Campos principais:
-
-```pascal
-CicloVidaMax   : Integer;
-CicloReproMax  : Integer;
-CicloVidaAtual : Integer;
-CicloReproAtual: Integer;
-```
-
-Responsabilidades:
-
-- armazenar tempo máximo de vida;
-- armazenar ciclo necessário para reprodução;
-- contar idade atual;
-- contar tempo desde a última reprodução.
-
-Métodos:
-
-```pascal
-constructor Create(ALife, ARepro: Integer);
-procedure ResetCounters;
+### Dependências das Units
+```mermaid
+graph TD
+    Form2 --> uSimulacao
+    Form2 --> uFormConfig
+    uFormConfig --> uTiposAnimais
+    uSimulacao --> uTabuleiro
+    uSimulacao --> uEstatisticas
+    uTabuleiro --> uSeres
+    uSeres --> uTiposAnimais
+    uEstatisticas --> uTiposAnimais
 ```
 
 ---
 
-## Classes específicas
+## Especificações das Units
 
-Atualmente as classes específicas herdam de `TSer`, mas não implementam métodos próprios:
+### 1. uTiposAnimais.pas
+Define a tipagem fundamental, valores estáticos e as configurações da simulação.
+- **`TTipoSer`**: Enumeração contendo as categorias: `(tsNone, tsBacteria, tsPlanta, tsVegetariano, tsCarnivoro)`.
+- **`TTamanhoAnimal`, `TToxicidade`, `TResistenciaVeneno`, `TResistenciaToxina`**: Enums que determinam as características secundárias (subespécies).
+- **`TSubEspecieInfo`**: Registro que mapeia estatísticas de vivos, mortos, extinções e ciclos de extinção por subespécie.
+- **`TSimulacaoConfig`**: Registro contendo os limites e metas geracionais, largura e altura do tabuleiro, semente do sistema, contadores de introdução, intervalo de histórico, e limites de pontos em memória (`MaxPontosHistorico`).
+- **`ObterConfigPadrao`**: Retorna configurações equilibradas de estabilidade inicial.
+- **`InicializarSubEspecies`**: Configura os nomes e referências dos 15 subtipos padrão.
 
-```pascal
-TBacteria     = class(TSer);
-TPlanta       = class(TSer);
-TVegetariano  = class(TSer);
-TCarnivoro    = class(TSer);
-```
+### 2. uSeres.pas
+Hierarquia de classes que modela os seres vivos.
+- **`TSer`**: Classe base que expõe:
+  - `FTipo`: Classificação biológica.
+  - `CicloVidaMax / CicloVidaAtual`: Monitoramento de idade e morte natural.
+  - `CicloReproMax / CicloReproAtual`: Monitoramento de maturidade reprodutiva.
+  - `CiclosSemComida`: Monitoramento persistente de fome individual.
+  - `Come / Mata`: Alvos mutacionais específicos.
+  - `Tamanho`, `Toxicidade`, `ResistenciaVeneno`, `ResistenciaToxina`: Características evolutivas adicionadas na Seção 22.4.
+- **`NomeSubEspecie(ASer: TSer)`**: Função centralizada que analisa as propriedades dinâmicas de um indivíduo e retorna a string de sua classificação de subespécie (Seção 23.9).
+- **Descendentes**: `TBacteria`, `TPlanta`, `TVegetariano` e `TCarnivoro`. Todos herdam e sobrescrevem propriedades de inicialização do construtor.
 
-As regras específicas de cada espécie estão concentradas no método `TTabuleiro.ProximoCiclo`.
+### 3. uTabuleiro.pas
+Estrutura física do ecossistema e gerenciamento de concorrência.
+- **Double Buffering (`FBoard` e `FNextBoard`)**:
+  - Evita inconsistência posicional. Durante a execução, todas as leituras são feitas de `FBoard` (estado atual estável).
+  - Todas as escritas e realocações são gravadas em `FNextBoard`.
+  - O método `CommitNextBoard` realiza o swap de referências (`FBoard := FNextBoard`) e desaloca da memória as células da grade anterior que morreram.
+- **`ListaVizinhosLivres`**: Retorna células vizinhas que estão vazias tanto na grade atual quanto no buffer de gravação do próximo frame, prevenindo sobreposição de animais.
+- **`SetTamanho(AW, AH)`**: Redimensiona dinamicamente a grade, executando a limpeza correta das referências de objetos.
 
-### Melhoria recomendada
+### 4. uSimulacao.pas
+O orquestrador do ecossistema (máquina de estados).
+- **`ExecutarCiclo`**:
+  - Aplica as mutações ecológicas (`MutarInstintos`) e executa as regras ambientais `Come` e `Mata`.
+  - Executa a varredura linear do tabuleiro chamando `ExecutarAcoesCelula(x, y)`.
+  - Adiciona o snapshot de telemetria ao histórico se o ciclo atual for múltiplo de `IntervaloRegistroHistorico`.
+- **`RegistraMorte(ASer: TSer; ACausa: TTipoMorte)`**:
+  - Método centralizado (Seção 23.13) chamado antes de desalocar qualquer célula. Classifica a subespécie do morto, incrementa os contadores de mortes acumulados por subespécie e por tipo de causa, e marca a subespécie como `JaExistiu := True`.
+- **Regras de Alimentação (`PodeComer`)**:
+  - Avalia o tipo principal, tamanho, venenos, toxinas e resistências. Carnívoros maiores comem carnívoros menores. Vegetarianos comem plantas venenosas se possuírem resistência a veneno; caso contrário, morrem envenenados instantaneamente.
+- **Regras de Reprodução**:
+  - A reprodução pode causar mutações estocásticas no nascimento a cada 100 gerações (Opção B - Mutação no nascimento). As características mutadas são transmitidas por hereditariedade.
 
-Para melhorar a arquitetura, cada espécie poderia implementar seu próprio comportamento, por exemplo:
+### 5. uEstatisticas.pas
+Mantém o rastreamento histórico de dados e telemetria por ciclo.
+- **`TEstatisticasHistorico`**:
+  - Armazena as estatísticas em uma estrutura de lista dinâmica segura.
+  - Implementa limite físico de memória (`MaxPontosHistorico`) realizando deslocamento (left shift) dos itens no array caso a contagem exceda o limite físico.
+  - O método `ExportarCSV` gera relatórios em formato CSV, salvando simultaneamente `exemplo_saida.csv` (geral) e `biodiversidade.csv` (detalhado por subespécie).
 
-```pascal
-procedure ProcessarCiclo(ATabuleiro: TTabuleiro; AX, AY: Integer); virtual;
-```
-
-Isso reduziria o tamanho do `case` central e deixaria o projeto mais orientado a objetos.
-
----
-
-## Registro `TCelula`
-
-```pascal
-TCelula = record
-  Tipo : TTipoSer;
-  Ent  : TSer;
-end;
-```
-
-Cada célula guarda:
-
-- o tipo do ser;
-- a instância do objeto correspondente.
-
-Quando a célula está vazia:
-
-```pascal
-Tipo = tsNone
-Ent = nil
-```
-
----
-
-## Classe `TTabuleiro`
-
-A classe `TTabuleiro` concentra o estado e a lógica da simulação.
-
-Campos principais:
-
-```pascal
-FCiclos : Int64;
-Board   : array[0..BOARD_W-1, 0..BOARD_H-1] of TCelula;
-```
-
-Métodos principais:
-
-| Método | Função |
-|---|---|
-| `Create` | cria o tabuleiro, zera e inicializa bactérias |
-| `Destroy` | libera os objetos existentes no tabuleiro |
-| `Zera` | limpa o tabuleiro |
-| `InicializaBacterias` | cria bactérias aleatórias no início |
-| `ColocaNovoSer` | coloca um novo ser em uma posição |
-| `Libera` | remove e libera o ser de uma célula |
-| `Reproduz` | tenta reproduzir em células vizinhas vazias |
-| `MoveAnimal` | move o ser para uma célula vizinha vazia |
-| `ProximoCiclo` | executa a evolução completa do tabuleiro |
+### 6. form2.pas / form2.lfm
+Controlador de visualização principal.
+- Redimensiona dinamicamente a grade e gerencia os botões.
+- Cria programaticamente um `TPageControl` na barra lateral contendo abas para:
+  - **Resumo**: estatísticas gerais populacionais e de biodiversidade.
+  - **Vivos**: contagem em tempo real, destacando subespécies em risco (1 a 3 indivíduos vivos) em cor amarela.
+  - **Mortos**: contagem acumulada de mortes de subespécies e distribuição de causas.
+  - **Extintos**: lista de subespécies extintas (já existiram, mas possuem 0 vivos) destacadas em cinza/vermelho com o respectivo ciclo de extinção.
+  - **Evolução**: ComboBoxes para selecionar subespécies, renderização gráfica utilizando `TAChart` (`TChart` + `TLineSeries` dinâmicos) e uma grade de visualização tabular. Inclui exportação independente de curva em CSV.
 
 ---
 
-## Inicialização
+## Fluxo de Execução do Ciclo Geracional
 
-No construtor do tabuleiro:
+O método `TSimulacao.ExecutarCiclo` executa os seguintes passos a cada ciclo geracional:
 
-```pascal
-Zera;
-InicializaBacterias;
-```
-
-A função `InicializaBacterias` percorre todo o tabuleiro e cria bactérias com probabilidade de 20%:
-
-```pascal
-if Random < 0.2 then
-```
-
-Isso significa que, em um tabuleiro 1000x1000, a simulação pode começar com aproximadamente 200.000 bactérias.
-
----
-
-## Criação de seres
-
-O método `ColocaNovoSer` cria os objetos conforme o tipo:
-
-```pascal
-tsBacteria     : TBacteria.Create(1,1);
-tsPlanta       : TPlanta.Create(10,3);
-tsVegetariano  : TVegetariano.Create(20,6);
-tsCarnivoro    : TCarnivoro.Create(40,12);
-```
-
-Parâmetros usados:
-
-| Espécie | Vida máxima | Ciclo de reprodução |
-|---|---:|---:|
-| Bactéria | 1 | 1 |
-| Planta | 10 | 3 |
-| Vegetariano | 20 | 6 |
-| Carnívoro | 40 | 12 |
-
----
-
-## Reprodução
-
-O método `Reproduz` percorre os oito vizinhos da célula atual.
-
-Se encontrar célula vazia, cria um novo ser do mesmo tipo.
-
-Ponto de atenção: no formato atual, a reprodução pode ocupar múltiplas células vizinhas em um único ciclo, pois não há limite de apenas um descendente por reprodução.
-
----
-
-## Movimento
-
-O método `MoveAnimal` procura células vazias ao redor e escolhe uma aleatoriamente.
-
-Fluxo:
-
-1. lista vizinhos vazios;
-2. sorteia um destino;
-3. cria o mesmo tipo no destino;
-4. libera a célula original.
-
-Ponto de atenção: o movimento recria o objeto e perde os contadores internos do ser original. Se a intenção for preservar idade e reprodução, o ideal é mover a referência do objeto em vez de criar uma nova.
-
----
-
-## Processamento do ciclo
-
-O método `ProximoCiclo` é o coração da simulação.
-
-Ele realiza:
-
-1. incremento de `FCiclos`;
-2. introdução de novas espécies nos ciclos 100, 200 e 300;
-3. incremento dos contadores de vida e reprodução;
-4. análise da vizinhança;
-5. aplicação das regras de morte, reprodução e movimento.
-
----
-
-## Renderização
-
-O desenho é feito em `TForm1.Desenha` usando `ScanLine`:
-
-```pascal
-Line := bmp.ScanLine[y];
-Line[x] := c;
-```
-
-Mapeamento de cores:
-
-```pascal
-tsBacteria    : c := $00FFFF;
-tsPlanta      : c := $00FF00;
-tsVegetariano : c := $0000FF;
-tsCarnivoro   : c := $FF0000;
-else            c := $000000;
-```
-
-Observação: os comentários indicam cores em formato BGR.
-
----
-
-## Pontos técnicos que precisam revisão
-
-### 1. Divergência entre `TForm1` e `TForm2`
-
-`unit1.pas` declara:
-
-```pascal
-TForm1 = class(TForm)
-```
-
-Mas `unit1.lfm` declara:
-
-```pascal
-object Form2: TForm2
-```
-
-Isso precisa ser normalizado para evitar erro de carregamento do formulário.
-
-### 2. Eventos dos botões no `.lfm`
-
-O `.lfm` analisado não apresenta `OnClick` nos botões.
-
-Os métodos existem no Pascal:
-
-```pascal
-btnStartClick
-btnPauseClick
-btnStopClick
-```
-
-Mas os botões precisam apontar para esses eventos no Lazarus.
-
-### 3. Controle de fome do carnívoro
-
-A matriz abaixo é local dentro de `ProximoCiclo`:
-
-```pascal
-carnivoreHunger: array[0..BOARD_W-1, 0..BOARD_H-1] of Integer;
-```
-
-Por ser local, ela pode não preservar corretamente o estado entre ciclos. O ideal é transformar esse dado em campo persistente do tabuleiro ou em propriedade do próprio ser.
-
-### 4. Alto consumo de memória
-
-O uso de um milhão de células, com possíveis centenas de milhares de objetos, pode pesar em máquinas simples.
-
-Possíveis soluções:
-
-- reduzir o tabuleiro durante desenvolvimento;
-- usar registros em vez de objetos para cada célula;
-- armazenar apenas células ocupadas em estrutura esparsa;
-- separar lógica e renderização;
-- processar por blocos.
-
-### 5. Movimento recriando objeto
-
-`MoveAnimal` cria novo objeto no destino, em vez de mover o existente. Isso simplifica o código, mas altera o comportamento biológico da simulação.
-
----
-
-## Melhorias recomendadas na arquitetura
-
-1. Criar uma unit separada para modelos de seres.
-2. Criar uma unit separada para o tabuleiro.
-3. Criar uma unit separada para renderização.
-4. Criar configuração externa de parâmetros.
-5. Adicionar estatísticas populacionais.
-6. Criar testes unitários das regras.
-7. Adicionar botão para gerar população inicial personalizada.
-8. Permitir salvar/carregar estado da simulação.
-
----
-
-## Estrutura sugerida futura
-
-```text
-animais/
-├── README.md
-├── docs/
-│   ├── GUIA_USUARIO.md
-│   ├── GUIA_DESENVOLVEDOR.md
-│   └── ANALISE_TECNICA.md
-├── src/
-│   ├── animais.lpr
-│   ├── uMain.pas
-│   ├── uMain.lfm
-│   ├── uSeres.pas
-│   ├── uTabuleiro.pas
-│   ├── uRender.pas
-│   └── uConfig.pas
-└── samples/
-    └── configuracoes_exemplo/
+```mermaid
+sequenceDiagram
+    participant S as TSimulacao
+    participant T as TTabuleiro
+    
+    rect rgb(40, 40, 40)
+    Note over S, T: Início do Ciclo
+    end
+    S->>T: Introduzir espécies em ciclos programados (ColocaSerAleatorio)
+    S->>S: Mutar instintos (EvoluirInstintos) se Ciclo mod 500 = 0
+    S->>S: Processar regras Come e Mata nos vizinhos (BoardAtual)
+    S->>T: PrepareNextBoard (Zerar NextBoard)
+    loop Para cada célula (x,y)
+        S->>S: ExecutarAcoesCelula(x,y)
+        Note over S: Avaliar idade e fome individual
+        Note over S: Se reproduzir: SpawnCellToNext(rx, ry)
+        Note over S: Se mover: CopyCellToNext(mx, my)
+        Note over S: Se permanecer: CopyCellToNext(x, y)
+    end
+    S->>T: CommitNextBoard (Swap de Grades e Liberar Mortos)
+    S->>S: Atualizar métricas (Tempo, FPS, Histórico)
 ```
 
 ---
 
-## Conclusão técnica
+## Como Adicionar uma Nova Espécie
 
-O projeto já possui uma ideia funcional e didática: transformar o Jogo da Vida em um ecossistema com espécies diferentes.
+Para estender a simulação e adicionar um novo ser vivo (por exemplo, um `THumano` ou `TVirus`):
 
-A lógica principal está implementada, mas concentrada em uma única unit. Para crescer, o projeto deve separar responsabilidades, corrigir inconsistências de formulário e melhorar o controle de estado das espécies.
+1. **Definir o Tipo**:
+   No arquivo `uTiposAnimais.pas`, adicione a nova categoria ao enum `TTipoSer`:
+   ```pascal
+   TTipoSer = (tsNone, tsBacteria, tsPlanta, tsVegetariano, tsCarnivoro, tsNovaEspecie);
+   ```
+   Adicione também uma constante para a sua cor correspondente.
+
+2. **Criar a Classe**:
+   No arquivo `uSeres.pas`, declare e implemente a nova classe:
+   ```pascal
+   TNovoSer = class(TSer)
+   public
+     constructor Create(ATipo: TTipoSer; ALife, ARepro: Integer); override;
+   end;
+   ```
+   E atualize a função factory `CriarSerPorTipo`:
+   ```pascal
+   tsNovaEspecie: Result := TNovoSer.Create(tsNovaEspecie, ALifeMax, AReproMax);
+   ```
+
+3. **Definir as Regras**:
+   No arquivo `uSimulacao.pas`, dentro de `ExecutarAcoesCelula`, adicione as regras ecológicas específicas da nova espécie no bloco `case ent.Tipo of`. Defina quando o ser morre, o que ele come, se ele se move e como se reproduz.
+
+4. **Registrar a Cor**:
+   No arquivo `form2.pas`, atualize o método `Desenha` no bloco `case tab.GetTipoAt(x, y) of` para mapear a constante de cor da nova espécie.

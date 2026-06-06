@@ -1,0 +1,284 @@
+object frmConfig: TfrmConfig
+  Left = 350
+  Height = 510
+  Top = 200
+  Width = 380
+  BorderStyle = bsDialog
+  Caption = 'Configurações da Simulação'
+  ClientHeight = 510
+  ClientWidth = 380
+  OnCreate = FormCreate
+  object lblLargura: TLabel
+    Left = 20
+    Height = 15
+    Top = 20
+    Width = 130
+    Caption = 'Largura do Tabuleiro:'
+    ParentColor = False
+  end
+  object edtLargura: TSpinEdit
+    Left = 180
+    Height = 23
+    Top = 18
+    Width = 180
+    MaxValue = 2000
+    MinValue = 10
+    TabOrder = 0
+    Value = 200
+  end
+  object lblAltura: TLabel
+    Left = 20
+    Height = 15
+    Top = 50
+    Width = 130
+    Caption = 'Altura do Tabuleiro:'
+    ParentColor = False
+  end
+  object edtAltura: TSpinEdit
+    Left = 180
+    Height = 23
+    Top = 48
+    Width = 180
+    MaxValue = 2000
+    MinValue = 10
+    TabOrder = 1
+    Value = 200
+  end
+  object lblVelocidade: TLabel
+    Left = 20
+    Height = 15
+    Top = 80
+    Width = 130
+    Caption = 'Intervalo do Timer (ms):'
+    ParentColor = False
+  end
+  object edtVelocidade: TSpinEdit
+    Left = 180
+    Height = 23
+    Top = 78
+    Width = 180
+    MaxValue = 5000
+    MinValue = 1
+    TabOrder = 2
+    Value = 10
+  end
+  object lblPctBacterias: TLabel
+    Left = 20
+    Height = 15
+    Top = 110
+    Width = 130
+    Caption = 'Bactérias Iniciais (%):'
+    ParentColor = False
+  end
+  object edtPctBacterias: TFloatSpinEdit
+    Left = 180
+    Height = 23
+    Top = 108
+    Width = 180
+    Increment = 0.01
+    MaxValue = 1
+    MinValue = 0
+    TabOrder = 3
+    Value = 0.1
+  end
+  object lblCicloPlanta: TLabel
+    Left = 20
+    Height = 15
+    Top = 140
+    Width = 130
+    Caption = 'Ciclo Entrada Plantas:'
+    ParentColor = False
+  end
+  object edtCicloPlanta: TSpinEdit
+    Left = 180
+    Height = 23
+    Top = 138
+    Width = 180
+    MaxValue = 100000
+    MinValue = 0
+    TabOrder = 4
+    Value = 300
+  end
+  object lblQtdPlanta: TLabel
+    Left = 20
+    Height = 15
+    Top = 170
+    Width = 130
+    Caption = 'Quantidade Plantas:'
+    ParentColor = False
+  end
+  object edtQtdPlanta: TSpinEdit
+    Left = 180
+    Height = 23
+    Top = 168
+    Width = 180
+    MaxValue = 5000
+    MinValue = 0
+    TabOrder = 5
+    Value = 10
+  end
+  object lblCicloVegetariano: TLabel
+    Left = 20
+    Height = 15
+    Top = 200
+    Width = 130
+    Caption = 'Ciclo Entrada Veg.:'
+    ParentColor = False
+  end
+  object edtCicloVegetariano: TSpinEdit
+    Left = 180
+    Height = 23
+    Top = 198
+    Width = 180
+    MaxValue = 100000
+    MinValue = 0
+    TabOrder = 6
+    Value = 600
+  end
+  object lblQtdVegetariano: TLabel
+    Left = 20
+    Height = 15
+    Top = 230
+    Width = 130
+    Caption = 'Quantidade Veg.:'
+    ParentColor = False
+  end
+  object edtQtdVegetariano: TSpinEdit
+    Left = 180
+    Height = 23
+    Top = 228
+    Width = 180
+    MaxValue = 5000
+    MinValue = 0
+    TabOrder = 7
+    Value = 5
+  end
+  object lblCicloCarnivoro: TLabel
+    Left = 20
+    Height = 15
+    Top = 260
+    Width = 130
+    Caption = 'Ciclo Entrada Carn.:'
+    ParentColor = False
+  end
+  object edtCicloCarnivoro: TSpinEdit
+    Left = 180
+    Height = 23
+    Top = 258
+    Width = 180
+    MaxValue = 100000
+    MinValue = 0
+    TabOrder = 8
+    Value = 900
+  end
+  object lblQtdCarnivoro: TLabel
+    Left = 20
+    Height = 15
+    Top = 290
+    Width = 130
+    Caption = 'Quantidade Carn.:'
+    ParentColor = False
+  end
+  object edtQtdCarnivoro: TSpinEdit
+    Left = 180
+    Height = 23
+    Top = 288
+    Width = 180
+    MaxValue = 5000
+    MinValue = 0
+    TabOrder = 9
+    Value = 2
+  end
+  object lblLimiteFomeBacteria: TLabel
+    Left = 20
+    Height = 15
+    Top = 320
+    Width = 130
+    Caption = 'Limite Fome Bactéria:'
+    ParentColor = False
+  end
+  object edtLimiteFomeBacteria: TSpinEdit
+    Left = 180
+    Height = 23
+    Top = 318
+    Width = 180
+    MaxValue = 100
+    MinValue = 1
+    TabOrder = 10
+    Value = 6
+  end
+  object lblLimiteFomeVegetariano: TLabel
+    Left = 20
+    Height = 15
+    Top = 350
+    Width = 130
+    Caption = 'Limite Fome Vegetariano:'
+    ParentColor = False
+  end
+  object edtLimiteFomeVegetariano: TSpinEdit
+    Left = 180
+    Height = 23
+    Top = 348
+    Width = 180
+    MaxValue = 100
+    MinValue = 1
+    TabOrder = 11
+    Value = 3
+  end
+  object lblLimiteFomeCarnivoro: TLabel
+    Left = 20
+    Height = 15
+    Top = 380
+    Width = 130
+    Caption = 'Limite Fome Carnívoro:'
+    ParentColor = False
+  end
+  object edtLimiteFomeCarnivoro: TSpinEdit
+    Left = 180
+    Height = 23
+    Top = 378
+    Width = 180
+    MaxValue = 100
+    MinValue = 1
+    TabOrder = 12
+    Value = 2
+  end
+  object lblSeed: TLabel
+    Left = 20
+    Height = 15
+    Top = 410
+    Width = 130
+    Caption = 'Seed Aleatória (0 = semente):'
+    ParentColor = False
+  end
+  object edtSeed: TSpinEdit
+    Left = 180
+    Height = 23
+    Top = 408
+    Width = 180
+    MaxValue = 2147483647
+    MinValue = 0
+    TabOrder = 13
+    Value = 0
+  end
+  object btnOk: TButton
+    Left = 50
+    Height = 30
+    Top = 460
+    Width = 110
+    Caption = 'Ok'
+    Default = True
+    ModalResult = 1
+    TabOrder = 14
+  end
+  object btnCancelar: TButton
+    Left = 220
+    Height = 30
+    Top = 460
+    Width = 110
+    Cancel = True
+    Caption = 'Cancelar'
+    ModalResult = 2
+    TabOrder = 15
+  end
+end
