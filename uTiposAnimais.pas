@@ -93,6 +93,12 @@ type
     IntervaloRegistroHistorico: Integer;
     MaxPontosHistorico: Integer;
     IntervaloAtualizacaoGrafico: Integer; // (Seção 24.12)
+    
+    // Quantidades Iniciais (Seção 24.15)
+    QtdBacteriasInicial: Integer;
+    QtdPlantasInicial: Integer;
+    QtdVegetarianosInicial: Integer;
+    QtdCarnivorosInicial: Integer;
   end;
 
 function ObterConfigPadrao: TSimulacaoConfig;
@@ -163,7 +169,7 @@ function ObterConfigPadrao: TSimulacaoConfig;
 begin
   Result.Largura := 200;
   Result.Altura := 200;
-  Result.PercentualBacteriasInicial := 0.10; // 10%
+  Result.PercentualBacteriasInicial := 0.0; // Usando valor absoluto por padrão
   Result.CicloEntradaPlantas := 300;
   Result.CicloEntradaVegetarianos := 600;
   Result.CicloEntradaCarnivoros := 900;
@@ -212,6 +218,12 @@ begin
   Result.IntervaloRegistroHistorico := 1;
   Result.MaxPontosHistorico := 10000;
   Result.IntervaloAtualizacaoGrafico := 10;
+  
+  // Valores padrões de quantidades iniciais (Seção 24.15)
+  Result.QtdBacteriasInicial := 10;
+  Result.QtdPlantasInicial := 100;
+  Result.QtdVegetarianosInicial := 10;
+  Result.QtdCarnivorosInicial := 4;
 end;
 
 end.

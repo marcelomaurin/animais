@@ -235,7 +235,7 @@ begin
   FMortesAcumuladasVegetariano := 0;
   FMortesAcumuladasCarnivoro := 0;
   
-  // Place initial bacteria based on percentage
+  // Place initial bacteria based on percentage if set, otherwise use absolute count (Seção 24.15)
   if FConfig.PercentualBacteriasInicial > 0 then
   begin
     FTabuleiro.ColocaSerAleatorio(
@@ -244,7 +244,40 @@ begin
       LIFE_BACTERIA,
       REPRO_BACTERIA
     );
+  end
+  else
+  begin
+    FTabuleiro.ColocaSerAleatorio(
+      tsBacteria,
+      FConfig.QtdBacteriasInicial,
+      LIFE_BACTERIA,
+      REPRO_BACTERIA
+    );
   end;
+  
+  // Place initial common plants (plantas comum 100)
+  FTabuleiro.ColocaSerAleatorio(
+    tsPlanta,
+    FConfig.QtdPlantasInicial,
+    LIFE_PLANTA,
+    REPRO_PLANTA
+  );
+  
+  // Place initial vegetarian/herbivore animals (herbivoros 10)
+  FTabuleiro.ColocaSerAleatorio(
+    tsVegetariano,
+    FConfig.QtdVegetarianosInicial,
+    LIFE_VEGETARIANO,
+    REPRO_VEGETARIANO
+  );
+  
+  // Place initial carnivore animals (carnivoros 4)
+  FTabuleiro.ColocaSerAleatorio(
+    tsCarnivoro,
+    FConfig.QtdCarnivorosInicial,
+    LIFE_CARNIVORO,
+    REPRO_CARNIVORO
+  );
   
   // Salva estado inicial (ciclo 0) no histórico se configurado (Seção 24.4 e 24.5)
   if (FCicloAtual mod FConfig.IntervaloRegistroHistorico = 0) then
