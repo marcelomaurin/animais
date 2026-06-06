@@ -54,6 +54,10 @@ type
     function ColocaSerAleatorio(ATipo: TTipoSer; AQuantidade: Integer; ALifeMax, AReproMax: Integer; ACome: TTipoSer = tsNone; AMata: TTipoSer = tsNone;
       ATamanho: TTamanhoAnimal = taMedio; AToxicidade: TToxicidade = txNenhuma;
       AResistenciaVeneno: TResistenciaVeneno = rvNenhuma; AResistenciaToxina: TResistenciaToxina = rtNenhuma): Integer;
+      
+    function ColocaSerNiche(ATipo: TTipoSer; AQuantidade: Integer; ALifeMax, AReproMax: Integer; ACome: TTipoSer = tsNone; AMata: TTipoSer = tsNone;
+      ATamanho: TTamanhoAnimal = taMedio; AToxicidade: TToxicidade = txNenhuma;
+      AResistenciaVeneno: TResistenciaVeneno = rvNenhuma; AResistenciaToxina: TResistenciaToxina = rtNenhuma): Integer;
     
     property W: Integer read FW;
     property H: Integer read FH;
@@ -313,6 +317,56 @@ begin
     begin
       x := Random(FW);
       y := Random(FH);
+      if (FBoard[x, y].Tipo = tsNone) and (FBoard[x, y].Ent = nil) then
+      begin
+        FBoard[x, y].Ent := CriarSerPorTipo(ATipo, ALifeMax, AReproMax);
+        if FBoard[x, y].Ent <> nil then
+        begin
+          FBoard[x, y].Ent.Come := ACome;
+          FBoard[x, y].Ent.Mata := AMata;
+          FBoard[x, y].Ent.Tamanho := ATamanho;
+          FBoard[x, y].Ent.Toxicidade := AToxicidade;
+          FBoard[x, y].Ent.ResistenciaVeneno := AResistenciaVeneno;
+          FBoard[x, y].Ent.ResistenciaToxina := AResistenciaToxina;
+        end;
+        FBoard[x, y].Tipo := ATipo;
+        Inc(placed);
+        Break;
+      end;
+      Inc(tries);
+    end;
+  end;
+  Result := placed;
+end;
+
+function TTabuleiro.ColocaSerNiche(ATipo: TTipoSer; AQuantidade: Integer; ALifeMax, AReproMax: Integer; ACome: TTipoSer = tsNone; AMata: TTipoSer = tsNone;
+  ATamanho: TTamanhoAnimal = taMedio; AToxicidade: TToxicidade = txNenhuma;
+  AResistenciaVeneno: TResistenciaVeneno = rvNenhuma; AResistenciaToxina: TResistenciaToxina = rtNenhuma): Integer;
+var
+  i, x, y, tries: Integer;
+  placed: Integer;
+  nx, ny, rx, ry: Integer;
+begin
+  placed := 0;
+  nx := FW div 2;
+  ny := FH div 2;
+  rx := Max(10, Min(25, FW div 6));
+  ry := Max(10, Min(25, FH div 6));
+  
+  for i := 1 to AQuantidade do
+  begin
+    tries := 0;
+    while tries < 5000 do
+    begin
+      x := nx - rx + Random(2 * rx + 1);
+      y := ny - ry + Random(2 * ry + 1);
+      
+      // Ensure bounds
+      if x < 0 then x := 0;
+      if x >= FW then x := FW - 1;
+      if y < 0 then y := 0;
+      if y >= FH then y := FH - 1;
+      
       if (FBoard[x, y].Tipo = tsNone) and (FBoard[x, y].Ent = nil) then
       begin
         FBoard[x, y].Ent := CriarSerPorTipo(ATipo, ALifeMax, AReproMax);

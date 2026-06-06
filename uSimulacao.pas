@@ -238,7 +238,7 @@ begin
   // Place initial bacteria based on percentage if set, otherwise use absolute count (Seção 24.15)
   if FConfig.PercentualBacteriasInicial > 0 then
   begin
-    FTabuleiro.ColocaSerAleatorio(
+    FTabuleiro.ColocaSerNiche(
       tsBacteria,
       Round(FConfig.Largura * FConfig.Altura * FConfig.PercentualBacteriasInicial),
       LIFE_BACTERIA,
@@ -247,7 +247,7 @@ begin
   end
   else
   begin
-    FTabuleiro.ColocaSerAleatorio(
+    FTabuleiro.ColocaSerNiche(
       tsBacteria,
       FConfig.QtdBacteriasInicial,
       LIFE_BACTERIA,
@@ -256,7 +256,7 @@ begin
   end;
   
   // Place initial common plants (plantas comum 100)
-  FTabuleiro.ColocaSerAleatorio(
+  FTabuleiro.ColocaSerNiche(
     tsPlanta,
     FConfig.QtdPlantasInicial,
     LIFE_PLANTA,
@@ -264,7 +264,7 @@ begin
   );
   
   // Place initial vegetarian/herbivore animals (herbivoros 10)
-  FTabuleiro.ColocaSerAleatorio(
+  FTabuleiro.ColocaSerNiche(
     tsVegetariano,
     FConfig.QtdVegetarianosInicial,
     LIFE_VEGETARIANO,
@@ -272,7 +272,7 @@ begin
   );
   
   // Place initial carnivore animals (carnivoros 4)
-  FTabuleiro.ColocaSerAleatorio(
+  FTabuleiro.ColocaSerNiche(
     tsCarnivoro,
     FConfig.QtdCarnivorosInicial,
     LIFE_CARNIVORO,
