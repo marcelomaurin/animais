@@ -1,78 +1,106 @@
-# Animals — 简化版生态系统模拟项目 (Lazarus / Free Pascal)
+# Animals — 简化生态系统模拟
 
-**Animals** 是一个基于智能体的视觉生态系统模拟项目，使用 **Lazarus / Free Pascal** 开发。本项目与 **CHATGPT** 库深度集成（具体使用 `openai_simulation` 包中的模拟组件），展示了元胞网格、进化规则以及基于安全双缓冲的循环执行的实际应用。
+**Animals** 是一个使用 **Lazarus / Free Pascal** 开发的可视化生态系统模拟项目。
 
----
+该项目演示了一个 2D 网格环境，其中包含简单生物、生存规则、进食、繁殖、死亡、有机物以及基础的实时统计。
 
-## 语言 / Languages
-
-- [Português (PT-BR)](README.md)
-- [English (EN)](README_EN.md)
-- [Español (ES)](README_ES.md)
-- [Français (FR)](README_FR.md)
-- [中文 (ZH)](README_ZH.md)
-- [العربية (AR)](README_AR.md)
+它也是 [`CHATGPT`](https://github.com/marcelomaurin/CHATGPT) 库的一个实践示例，因为该项目依赖 `openai_simulation` 包，并且 `TSer` 类继承自 `TAISimEntity`。
 
 ---
 
-## 项目功能
+## 当前项目状态
 
-该项目在一个 $80 \times 80$ 的二维网格中模拟简化生态系统的生存和繁殖动态。系统由 5 种实体类型构成：
+当前版本是一个**简化但可运行的模拟项目**，重点展示：
 
-| 类型 | 颜色 | 行为 |
+- 二维网格；
+- 用对象表示的生物/代理；
+- 基于 timer 的模拟循环；
+- 物种之间的进食关系；
+- 繁殖；
+- 因年龄或饥饿死亡；
+- 死亡生物转化为有机物；
+- 有机物降解后转化为细菌；
+- 简单可视化渲染；
+- 种群计数；
+- 简单 CSV 摘要导出。
+
+亚种、历史图表、复杂突变、可视化配置界面和高级生物多样性面板**尚未在当前源码中实现**，应作为未来改进方向。
+
+---
+
+## 模拟实体
+
+| 类型 | 界面颜色 | 当前行为 |
 |---|---|---|
-| **植物 (Plant)** | 绿色 | 基础资源，若有空间，在若干循环后进行繁殖。 |
-| **草食动物 (Herbivore)** | 蓝色 | 移动并以植物为食。因年龄或饥饿死亡。 |
-| **肉食动物 (Carnivore)** | 红色 | 在第 200 个循环引入，以草食动物为食。因年龄或饥饿死亡。 |
-| **有机物 (Organic Matter)** | 棕色 | 由植物、草食动物或肉食动物死亡产生。在若干循环后降解。 |
-| **细菌 (Bacteria)** | 黄色 | 从降解的有机物中产生，消耗有机物并进行繁殖。 |
-
----
-
-## 设计原则与稳定性
-
-此版本经过完全重构，以确保稳定运行并防止内存问题（内存访问冲突 Access Violations 和双重释放 Double-Frees）：
-
-1. **安全双缓冲**：网格 (`TTabuleiro`) 维护 `FBoard`（当前状态）和 `FNextBoard`（下一状态）。所有修改写入 `FNextBoard` 并于循环结束时提交。
-2. **唯一所有权**：存活的实体对象 (`TSer`) 在同一时间仅属于一个缓冲区。
-3. **安全内存释放**：死亡的实体被标记为 `Morto := True` 并从活动模拟中移除。内存释放 (`Free`) 仅在网格的 `Commit` 阶段集中执行。
-4. **固定随机种子**：初始化时使用固定的伪随机种子以保证科学可重复性。
-
----
-
-## 与 CHATGPT 库集成
-
-核心类 `TSer`（位于 `uTipos.pas`）直接继承自 `openai_simulation` 包中的 `TAISimEntity`。这使得该生态系统能够作为模拟环境，用于 AI 模型训练、逻辑智能体决策以及生态数据分析。
+| **细菌** | 黄色 | 可以消耗有机物，随机移动并繁殖。 |
+| **植物** | 绿色 | 作为草食动物的食物，也可以繁殖。 |
+| **草食动物** | 蓝色 | 吃植物、移动，并因年龄或饥饿死亡。 |
+| **肉食动物** | 红色 | 在配置的循环中出现，吃草食动物，并因年龄或饥饿死亡。 |
+| **有机物** | 棕色 | 由死亡的植物、草食动物和肉食动物产生，之后降解为细菌。 |
 
 ---
 
 ## 代码结构
 
-* **`uTipos.pas`**：继承自 `TAISimEntity` 的 `TSer` 类。
-* **`uTabuleiro.pas`**：包含双缓冲和安全内存管理的网格管理器。
-* **`uConfig.pas`**：包含已校准生态参数的 `TConfig` 记录类型。
-* **`uSimulacao.pas`**：处理模拟步骤并应用生物学规则的核心引擎。
-* **`uEstat.pas`**：记录每个循环人口数量的数据结构。
-* **`form2.pas` / `form2.lfm`**：包含启动、暂停、停止、重新启动按钮以及 CSV 导出的可视化控制界面。
+| 文件 | 职责 |
+|---|---|
+| `animal.lpr` | Lazarus 主程序。 |
+| `animal.lpi` | Lazarus 项目文件，包含 `openai_simulation` 依赖。 |
+| `form2.pas` / `form2.lfm` | 主界面、timer、绘制和 CSV 导出。 |
+| `uTipos.pas` | 定义 `TTipo` 和继承自 `TAISimEntity` 的 `TSer`。 |
+| `uConfig.pas` | 定义 `TConfig` 和默认参数。 |
+| `uTabuleiro.pas` | 使用 `FBoard` 和 `FNextBoard` 实现网格。 |
+| `uSimulacao.pas` | 实现生态规则和模拟循环。 |
+| `uEstat.pas` | 定义用于种群计数的 `TEstat` record。 |
 
 ---
 
-## 如何编译和运行
+## 与 CHATGPT 库的关系
 
-### 开发要求
-- Lazarus IDE
-- Free Pascal Compiler (FPC)
-- CHATGPT 库（`pacote` 文件夹必须在 `.lpi` 中配置的搜索路径内）
+该项目展示了可以使用 [`CHATGPT`](https://github.com/marcelomaurin/CHATGPT) 库构建的应用类型，特别是 **AI Simulation** 区域。
 
-### 编译步骤
-在项目根目录下打开终端并运行：
+当前版本的集成仍然是最小化的：
+
+- Lazarus 项目依赖 `openai_simulation`；
+- `TSer` 继承自 `TAISimEntity`；
+- 项目结构遵循实体、网格、循环和指标等模拟概念。
+
+该项目可以作为教学基础，逐步演进到更完整地使用 `AI Simulation` 组件。
+
+---
+
+## 如何编译
+
+### 要求
+
+- Lazarus IDE；
+- Free Pascal Compiler；
+- 本地 [`CHATGPT`](https://github.com/marcelomaurin/CHATGPT) 副本；
+- Lazarus 能访问或安装 `openai_simulation` 包。
+
+### 编译
+
 ```bash
+git clone https://github.com/marcelomaurin/animais.git
+cd animais
 lazbuild animal.lpi
 ```
 
-或者直接在 Lazarus IDE 中打开 `animal.lpi` 并按 **F9** 运行。
+也可以在 Lazarus 中打开 `animal.lpi` 并通过 IDE 编译。
 
 ---
 
-## 开源协议
-本项目采用 **GPL-3.0** 开源协议。
+## 当前限制
+
+- 配置仍然固定在 `uConfig.pas` 中。
+- CSV 导出只是简单快照。
+- 尚无完整的循环历史记录。
+- 尚无图表或分页面板。
+- 当前代码中没有亚种或高级突变。
+- 项目尚未使用完整的 `AI Simulation` 组件集。
+
+---
+
+## 许可证
+
+本项目采用 **GPL-3.0** 许可证发布。
