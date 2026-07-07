@@ -1,147 +1,296 @@
-# Guia do Desenvolvedor — Animais / Jogo da Vida Evoluído
+# Guia do Desenvolvedor — Animais
 
-Este guia detalha a estrutura de software, fluxo geracional de ciclos, regras de concorrência e o design orientado a objetos do projeto **Animais**.
+Este documento descreve a arquitetura real da versão atual do projeto **Animais**.
+
+O projeto é uma aplicação Lazarus / Free Pascal que simula um pequeno ecossistema em grade 2D. A versão atual é simplificada e usa as units:
+
+- `uConfig.pas`;
+- `uTipos.pas`;
+- `uTabuleiro.pas`;
+- `uSimulacao.pas`;
+- `uEstat.pas`;
+- `form2.pas` / `form2.lfm`.
+
+O projeto também declara dependência do pacote `openai_simulation` e usa `TAISimEntity` como ancestral da classe `TSer`.
 
 ---
 
-## Arquitetura de Software
+## Dependências das units
 
-A aplicação foi projetada sob o princípio de separação de responsabilidades. O formulário Lazarus (`Form2`) atua estritamente como um controlador de apresentação e renderizador gráfico, enquanto a lógica computacional do ecossistema reside inteiramente em modelos separados.
-
-### Dependências das Units
 ```mermaid
 graph TD
-    Form2 --> uSimulacao
-    Form2 --> uFormConfig
-    uFormConfig --> uTiposAnimais
+    animal_lpr[animal.lpr] --> form2
+    animal_lpr --> uConfig
+    animal_lpr --> uTipos
+    animal_lpr --> uTabuleiro
+    animal_lpr --> uSimulacao
+    animal_lpr --> uEstat
+
+    form2 --> uConfig
+    form2 --> uTipos
+    form2 --> uTabuleiro
+    form2 --> uSimulacao
+    form2 --> uEstat
+
+    uSimulacao --> uTipos
     uSimulacao --> uTabuleiro
-    uSimulacao --> uEstatisticas
-    uTabuleiro --> uSeres
-    uSeres --> uTiposAnimais
-    uEstatisticas --> uTiposAnimais
+    uSimulacao --> uConfig
+    uSimulacao --> uEstat
+
+    uTabuleiro --> uTipos
+    uTipos --> TAISimEntity
 ```
 
 ---
 
-## Especificações das Units
+## 1. `animal.lpr`
 
-### 1. uTiposAnimais.pas
-Define a tipagem fundamental, valores estáticos e as configurações da simulação.
-- **`TTipoSer`**: Enumeração contendo as categorias: `(tsNone, tsBacteria, tsPlanta, tsVegetariano, tsCarnivoro)`.
-- **`TTamanhoAnimal`, `TToxicidade`, `TResistenciaVeneno`, `TResistenciaToxina`**: Enums que determinam as características secundárias (subespécies).
-- **`TSubEspecieInfo`**: Registro que mapeia estatísticas de vivos, mortos, extinções e ciclos de extinção por subespécie.
-- **`TSimulacaoConfig`**: Registro contendo os limites e metas geracionais, largura e altura do tabuleiro, semente do sistema, contadores de introdução, intervalo de histórico, e limites de pontos em memória (`MaxPontosHistorico`).
-- **`ObterConfigPadrao`**: Retorna configurações equilibradas de estabilidade inicial.
-- **`InicializarSubEspecies`**: Configura os nomes e referências dos 15 subtipos padrão.
+Arquivo principal do programa Lazarus.
 
-### 2. uSeres.pas
-Hierarquia de classes que modela os seres vivos.
-- **`TSer`**: Classe base que expõe:
-  - `FTipo`: Classificação biológica.
-  - `CicloVidaMax / CicloVidaAtual`: Monitoramento de idade e morte natural.
-  - `CicloReproMax / CicloReproAtual`: Monitoramento de maturidade reprodutiva.
-  - `CiclosSemComida`: Monitoramento persistente de fome individual.
-  - `Come / Mata`: Alvos mutacionais específicos.
-  - `Tamanho`, `Toxicidade`, `ResistenciaVeneno`, `ResistenciaToxina`: Características evolutivas adicionadas na Seção 22.4.
-- **`NomeSubEspecie(ASer: TSer)`**: Função centralizada que analisa as propriedades dinâmicas de um indivíduo e retorna a string de sua classificação de subespécie (Seção 23.9).
-- **Descendentes**: `TBacteria`, `TPlanta`, `TVegetariano` e `TCarnivoro`. Todos herdam e sobrescrevem propriedades de inicialização do construtor.
+Responsabilidades:
 
-### 3. uTabuleiro.pas
-Estrutura física do ecossistema e gerenciamento de concorrência.
-- **Double Buffering (`FBoard` e `FNextBoard`)**:
-  - Evita inconsistência posicional. Durante a execução, todas as leituras são feitas de `FBoard` (estado atual estável).
-  - Todas as escritas e realocações são gravadas em `FNextBoard`.
-  - O método `CommitNextBoard` realiza o swap de referências (`FBoard := FNextBoard`) e desaloca da memória as células da grade anterior que morreram.
-- **`ListaVizinhosLivres`**: Retorna células vizinhas que estão vazias tanto na grade atual quanto no buffer de gravação do próximo frame, prevenindo sobreposição de animais.
-- **`SetTamanho(AW, AH)`**: Redimensiona dinamicamente a grade, executando a limpeza correta das referências de objetos.
+- inicializar a aplicação;
+- carregar `TForm2`;
+- declarar as units usadas pelo projeto.
 
-### 4. uSimulacao.pas
-O orquestrador do ecossistema (máquina de estados).
-- **`ExecutarCiclo`**:
-  - Aplica as mutações ecológicas (`MutarInstintos`) e executa as regras ambientais `Come` e `Mata`.
-  - Executa a varredura linear do tabuleiro chamando `ExecutarAcoesCelula(x, y)`.
-  - Adiciona o snapshot de telemetria ao histórico se o ciclo atual for múltiplo de `IntervaloRegistroHistorico`.
-- **`RegistraMorte(ASer: TSer; ACausa: TTipoMorte)`**:
-  - Método centralizado (Seção 23.13) chamado antes de desalocar qualquer célula. Classifica a subespécie do morto, incrementa os contadores de mortes acumulados por subespécie e por tipo de causa, e marca a subespécie como `JaExistiu := True`.
-- **Regras de Alimentação (`PodeComer`)**:
-  - Avalia o tipo principal, tamanho, venenos, toxinas e resistências. Carnívoros maiores comem carnívoros menores. Vegetarianos comem plantas venenosas se possuírem resistência a veneno; caso contrário, morrem envenenados instantaneamente.
-- **Regras de Reprodução**:
-  - A reprodução pode causar mutações estocásticas no nascimento a cada 100 gerações (Opção B - Mutação no nascimento). As características mutadas são transmitidas por hereditariedade.
+Units carregadas atualmente:
 
-### 5. uEstatisticas.pas
-Mantém o rastreamento histórico de dados e telemetria por ciclo.
-- **`TEstatisticasHistorico`**:
-  - Armazena as estatísticas em uma estrutura de lista dinâmica segura.
-  - Implementa limite físico de memória (`MaxPontosHistorico`) realizando deslocamento (left shift) dos itens no array caso a contagem exceda o limite físico.
-  - O método `ExportarCSV` gera relatórios em formato CSV, salvando simultaneamente `exemplo_saida.csv` (geral) e `biodiversidade.csv` (detalhado por subespécie).
-
-### 6. form2.pas / form2.lfm
-Controlador de visualização principal.
-- Redimensiona dinamicamente a grade e gerencia os botões.
-- Cria programaticamente um `TPageControl` na barra lateral contendo abas para:
-  - **Resumo**: estatísticas gerais populacionais e de biodiversidade.
-  - **Vivos**: contagem em tempo real, destacando subespécies em risco (1 a 3 indivíduos vivos) em cor amarela.
-  - **Mortos**: contagem acumulada de mortes de subespécies e distribuição de causas.
-  - **Extintos**: lista de subespécies extintas (já existiram, mas possuem 0 vivos) destacadas em cinza/vermelho com o respectivo ciclo de extinção.
-  - **Evolução**: ComboBoxes para selecionar subespécies, renderização gráfica utilizando `TAChart` (`TChart` + `TLineSeries` dinâmicos) e uma grade de visualização tabular. Inclui exportação independente de curva em CSV.
-
----
-
-## Fluxo de Execução do Ciclo Geracional
-
-O método `TSimulacao.ExecutarCiclo` executa os seguintes passos a cada ciclo geracional:
-
-```mermaid
-sequenceDiagram
-    participant S as TSimulacao
-    participant T as TTabuleiro
-    
-    rect rgb(40, 40, 40)
-    Note over S, T: Início do Ciclo
-    end
-    S->>T: Introduzir espécies em ciclos programados (ColocaSerAleatorio)
-    S->>S: Mutar instintos (EvoluirInstintos) se Ciclo mod 500 = 0
-    S->>S: Processar regras Come e Mata nos vizinhos (BoardAtual)
-    S->>T: PrepareNextBoard (Zerar NextBoard)
-    loop Para cada célula (x,y)
-        S->>S: ExecutarAcoesCelula(x,y)
-        Note over S: Avaliar idade e fome individual
-        Note over S: Se reproduzir: SpawnCellToNext(rx, ry)
-        Note over S: Se mover: CopyCellToNext(mx, my)
-        Note over S: Se permanecer: CopyCellToNext(x, y)
-    end
-    S->>T: CommitNextBoard (Swap de Grades e Liberar Mortos)
-    S->>S: Atualizar métricas (Tempo, FPS, Histórico)
+```pascal
+Forms, form2, uConfig, uTipos, uTabuleiro, uSimulacao, uEstat;
 ```
 
 ---
 
-## Como Adicionar uma Nova Espécie
+## 2. `animal.lpi`
 
-Para estender a simulação e adicionar um novo ser vivo (por exemplo, um `THumano` ou `TVirus`):
+Arquivo de projeto do Lazarus.
 
-1. **Definir o Tipo**:
-   No arquivo `uTiposAnimais.pas`, adicione a nova categoria ao enum `TTipoSer`:
-   ```pascal
-   TTipoSer = (tsNone, tsBacteria, tsPlanta, tsVegetariano, tsCarnivoro, tsNovaEspecie);
-   ```
-   Adicione também uma constante para a sua cor correspondente.
+Pontos importantes:
 
-2. **Criar a Classe**:
-   No arquivo `uSeres.pas`, declare e implemente a nova classe:
-   ```pascal
-   TNovoSer = class(TSer)
-   public
-     constructor Create(ATipo: TTipoSer; ALife, ARepro: Integer); override;
-   end;
-   ```
-   E atualize a função factory `CriarSerPorTipo`:
-   ```pascal
-   tsNovaEspecie: Result := TNovoSer.Create(tsNovaEspecie, ALifeMax, AReproMax);
-   ```
+- declara dependência do pacote `openai_simulation`;
+- declara dependência de `LCL`;
+- inclui as units principais do projeto;
+- possui caminho local para a biblioteca `CHATGPT`, que pode precisar ser ajustado em outra máquina.
 
-3. **Definir as Regras**:
-   No arquivo `uSimulacao.pas`, dentro de `ExecutarAcoesCelula`, adicione as regras ecológicas específicas da nova espécie no bloco `case ent.Tipo of`. Defina quando o ser morre, o que ele come, se ele se move e como se reproduz.
+---
 
-4. **Registrar a Cor**:
-   No arquivo `form2.pas`, atualize o método `Desenha` no bloco `case tab.GetTipoAt(x, y) of` para mapear a constante de cor da nova espécie.
+## 3. `uTipos.pas`
+
+Define os tipos básicos da simulação.
+
+### Enum `TTipo`
+
+```pascal
+TTipo = (tNada, tBacteria, tPlanta, tHerbivoro, tCarnivoro, tMateria);
+```
+
+### Classe `TSer`
+
+A classe `TSer` herda de `TAISimEntity`.
+
+Campos principais:
+
+- `Tipo`: tipo do ser;
+- `Idade`: idade atual;
+- `VidaMax`: idade máxima;
+- `Fome`: contador de fome;
+- `FomeMax`: limite de fome;
+- `Repro`: contador de reprodução;
+- `ReproMax`: ciclo necessário para reproduzir;
+- `Morto`: marca se a entidade morreu.
+
+Construtor principal:
+
+```pascal
+constructor CreateSer(ATipo: TTipo; AVidaMax, AFomeMax, AReproMax: Integer);
+```
+
+---
+
+## 4. `uConfig.pas`
+
+Define o record `TConfig` e a função `ConfigPadrao`.
+
+Parâmetros principais:
+
+- `Largura`;
+- `Altura`;
+- `Seed`;
+- `PctBacteria`;
+- `PctPlanta`;
+- `PctHerbivoro`;
+- `PctCarnivoro`;
+- `VidaBacteria`;
+- `VidaPlanta`;
+- `VidaHerbivoro`;
+- `VidaCarnivoro`;
+- `FomeHerbivoro`;
+- `FomeCarnivoro`;
+- `ReproPlanta`;
+- `ReproHerbivoro`;
+- `ReproCarnivoro`;
+- `ReproBacteria`;
+- `DegradaMateria`;
+- `CicloEntradaCarnivoro`.
+
+Na versão atual, a configuração é estática. Não há tela de edição visual dos parâmetros.
+
+---
+
+## 5. `uTabuleiro.pas`
+
+Implementa a grade da simulação.
+
+Estrutura interna:
+
+```pascal
+FBoard: array of array of TSer;
+FNextBoard: array of array of TSer;
+```
+
+`FBoard` representa o estado atual. `FNextBoard` representa o próximo estado a ser confirmado no fim do ciclo.
+
+Métodos principais:
+
+- `SetTamanho(AW, AH)`: cria/redimensiona a grade;
+- `InBounds(X, Y)`: verifica se a coordenada está dentro da grade;
+- `GetSer(X, Y)`: retorna o ser no estado atual;
+- `GetSerNext(X, Y)`: retorna o ser no próximo estado;
+- `CelulaLivreNext(X, Y)`: verifica se a posição está livre no próximo estado;
+- `PrepararProximo`: limpa o próximo buffer;
+- `Mover(X, Y, NX, NY)`: move um ser do estado atual para o próximo estado;
+- `Colocar(ASer, X, Y)`: coloca um ser no próximo estado;
+- `ColocarNoBoard(ASer, X, Y)`: coloca diretamente no estado atual, usado na semeadura inicial;
+- `MarcarMorto(X, Y)`: marca um ser como morto;
+- `Commit`: troca os buffers e libera os seres marcados como mortos.
+
+### Atenção técnica
+
+O método `Mover` deve sempre retornar `False` quando não conseguir mover. Vale revisar o código para garantir que `Result` seja inicializado no início do método.
+
+---
+
+## 6. `uSimulacao.pas`
+
+Implementa o motor ecológico da simulação.
+
+A classe principal é `TSimulacao`.
+
+Campos principais:
+
+- `FTab`: tabuleiro;
+- `FCfg`: configuração;
+- `FCiclo`: ciclo atual.
+
+Métodos principais:
+
+- `Create(const ACfg: TConfig)`: cria simulação e semeia o mundo inicial;
+- `ExecutarCiclo`: executa um ciclo completo;
+- `SemearCarnivoros`: introduz carnívoros no ciclo configurado;
+- `Contar`: retorna estatísticas básicas;
+- `Semear`: cria a população inicial;
+- `ProcessarCelula`: aplica regras de idade, fome, alimentação, movimento e reprodução;
+- `MorrerVirandoMateria`: transforma plantas, herbívoros e carnívoros mortos em matéria orgânica;
+- `ObterVizinhosLivresNext`: busca posição livre para movimento/reprodução;
+- `ObterPreyAdjacente`: busca presa adjacente.
+
+### Fluxo real de `ExecutarCiclo`
+
+1. Incrementa `FCiclo`.
+2. Se `FCiclo = CicloEntradaCarnivoro`, chama `SemearCarnivoros`.
+3. Chama `FTab.PrepararProximo`.
+4. Percorre todas as células de `FBoard`.
+5. Para cada ser vivo, chama `ProcessarCelula`.
+6. Chama `FTab.Commit`.
+
+### Regras atuais
+
+- Bactérias podem comer matéria orgânica.
+- Herbívoros podem comer plantas adjacentes.
+- Carnívoros podem comer herbívoros adjacentes.
+- Herbívoros e carnívoros acumulam fome quando não comem.
+- Plantas, herbívoros e carnívoros mortos viram matéria orgânica.
+- Matéria orgânica pode degradar e virar bactéria.
+- Bactérias, herbívoros e carnívoros podem se mover aleatoriamente.
+- Seres podem reproduzir quando atingem `ReproMax`.
+
+---
+
+## 7. `uEstat.pas`
+
+Define o record `TEstat`.
+
+Campos:
+
+- `Ciclo`;
+- `Bacterias`;
+- `Plantas`;
+- `Herbivoros`;
+- `Carnivoros`;
+- `Materia`;
+- `Vazios`.
+
+A versão atual mantém apenas um resumo instantâneo. Ainda não existe histórico completo por ciclo.
+
+---
+
+## 8. `form2.pas` / `form2.lfm`
+
+Interface principal da aplicação.
+
+Responsabilidades:
+
+- criar `TSimulacao`;
+- controlar o timer `tmCycle`;
+- desenhar o tabuleiro no `TImage`;
+- atualizar labels de estatísticas;
+- iniciar, pausar, parar e reiniciar a simulação;
+- exportar o estado atual para `export_form.csv`;
+- mostrar mensagem de configuração/sobre.
+
+### Limitações atuais da interface
+
+- Não há tela real de configuração.
+- Não há gráficos.
+- Não há abas.
+- Não há histórico visual.
+- A exportação é apenas do estado atual.
+- O desenho usa `Canvas.FillRect` por célula, não renderização otimizada por `ScanLine`.
+
+---
+
+## Relação com `CHATGPT / openai_simulation`
+
+A integração atual é inicial e direta:
+
+- o projeto depende do pacote `openai_simulation`;
+- `TSer` herda de `TAISimEntity`;
+- a lógica do projeto demonstra um cenário compatível com conceitos de simulação por agentes.
+
+Ainda não há uso completo de componentes como `TAIGridWorld`, `TAIMovementEngine`, `TAIRuleEngine`, `TAISimulationStats` ou `TAIScenarioConfig`.
+
+Esses componentes podem ser incorporados em uma próxima etapa.
+
+---
+
+## Como adicionar um novo tipo de ser
+
+1. Adicione o novo tipo ao enum `TTipo` em `uTipos.pas`.
+2. Atualize `ConfigPadrao`, se o novo tipo precisar de parâmetros próprios.
+3. Atualize `TSimulacao.ProcessarCelula` com as regras do novo tipo.
+4. Atualize `TSimulacao.Contar` para contabilizar o novo tipo.
+5. Atualize `TForm2.Desenha` para definir uma cor visual.
+6. Atualize a exportação CSV, se necessário.
+
+---
+
+## Próximos passos técnicos
+
+1. Inicializar `Result := False` em `TTabuleiro.Mover`.
+2. Criar `OnDestroy` no formulário para liberar `FSimulacao`.
+3. Criar tela real de configuração.
+4. Criar histórico por ciclo.
+5. Melhorar exportação CSV.
+6. Criar renderização mais eficiente usando bitmap/scanline.
+7. Substituir regras fixas por um motor de regras.
+8. Migrar gradualmente para os componentes completos de `openai_simulation`.
