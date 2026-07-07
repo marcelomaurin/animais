@@ -1,95 +1,147 @@
-# Guia do Usuário — Animais / Jogo da Vida Evoluído
+# Guia do Usuário — Animais
 
-Este guia explica como utilizar a aplicação **Animais — Jogo da Vida Evoluído**, fornecendo instruções de uso dos novos controles, visualização de estatísticas e configuração da simulação.
+Este guia descreve a versão atual da aplicação **Animais**, uma simulação visual simplificada de ecossistema feita em **Lazarus / Free Pascal**.
 
----
-
-## O que é a Simulação?
-
-A simulação representa um ecossistema dinâmico onde seres de diferentes espécies coexistem em uma grade espacial (tabuleiro). Cada ser possui regras biológicas simples de sobrevivência, movimento e reprodução, mas a sua interação coletiva produz comportamentos ecológicos emergentes e padrões visuais complexos.
-
-### Identificação Visual (Cores e Subespécies)
-- ⬛ **Preto**: Célula vazia.
-- 🟡 **Amarelo**: **Bactéria não tóxica** (comum).
-- 🟪 **Roxo**: **Bactéria tóxica** (mutada, envelhece plantas).
-- 🟢 **Verde brilhante**: **Planta comum**.
-- 🌲 **Verde escuro**: **Planta venenosa** (mata herbívoros não resistentes).
-- 🌿 **Verde claro**: **Planta resistente à toxina bacteriana**.
-- 🔵 **Azul**: **Herbívoro comum**.
-- 🌐 **Ciano**: **Herbívoro resistente a veneno**.
-- 🔴 **Vermelho**: **Carnívoro médio** (comum).
-- 💮 **Vermelho claro**: **Carnívoro pequeno**.
-- 🩸 **Vermelho escuro**: **Carnívoro grande**.
+A aplicação mostra uma grade 2D onde diferentes tipos de seres aparecem, se movem, se alimentam, reproduzem, morrem e podem gerar matéria orgânica.
 
 ---
 
-## Estrutura da Interface
+## O que aparece na tela
 
-A tela principal do sistema está dividida em duas áreas fundamentais:
-1. **Área de Visualização (Esquerda)**: Renderiza o tabuleiro da simulação em tempo real, dimensionando-se automaticamente ao tamanho configurado.
-2. **Painel de Controle e Estatísticas (Direita)**: Uma barra lateral contendo o painel de abas de estatísticas e a área inferior de botões.
+A tela principal é dividida em duas partes:
 
-### Abas de Biodiversidade e Evolução
-
-O painel de estatísticas está organizado em 5 abas:
-
-#### 1. Aba "Resumo"
-Exibe uma visão geral e de alto nível do ecossistema:
-- Ciclo atual, FPS e tempo de processamento.
-- Contagem por espécie e as variações ativas.
-- Total de espécies e subespécies vivas, extintas e mortes acumuladas.
-
-#### 2. Aba "Vivos"
-Uma tabela listando as 15 subespécies possíveis e a quantidade de indivíduos vivos em tempo real. Subespécies em risco de extinção (com população entre 1 e 3 indivíduos) aparecem **destacadas em amarelo**.
-
-#### 3. Aba "Mortos"
-Exibe o acumulado histórico de mortes por subespécie e uma tabela lateral com a distribuição das causas de mortes (Fome, Idade, Predação, Veneno, Toxina, Aleatória, Conflito).
-
-#### 4. Aba "Extintos"
-Tabela que lista subespécies que já existiram na simulação mas que no momento possuem 0 indivíduos vivos. Exibe o nome da subespécie e o ciclo exato em que ocorreu sua extinção. Aparecem **destacadas em cinza/vermelho**.
-
-#### 5. Aba "Evolução"
-Permite acompanhar graficamente o histórico de uma subespécie específica:
-1. Selecione o **Tipo Principal** (Bactéria, Planta, Herbívoro, Carnívoro) no primeiro ComboBox.
-2. Selecione a **Subespécie** desejada no segundo ComboBox.
-3. Clique em **Atualizar** para carregar a curva de evolução populacional no gráfico (eixo X = Ciclos, eixo Y = Indivíduos vivos) e na tabela de dados adjacente.
-4. Se a subespécie estiver extinta, o título do gráfico exibirá o ciclo da extinção.
-5. Clique em **Exportar** para salvar o histórico da subespécie selecionada no arquivo `docs/historico_subespecie.csv`.
+1. **Área do tabuleiro**: mostra a simulação em tempo real.
+2. **Painel lateral**: mostra os contadores e botões de controle.
 
 ---
 
-## Controles de Ação
+## Cores da simulação
 
-Os botões habilitam-se de acordo com o estado da simulação para evitar inconsistências:
-- **Iniciar / Continuar**: Inicia a simulação ou retoma a execução a partir do estado pausado.
-- **Pausar**: Congela temporariamente a simulação. Permite analisar as populações e habilita a exportação de dados.
-- **Parar**: Interrompe a simulação e limpa o tabuleiro de volta ao estado inicial vazio.
-- **Reiniciar**: Zera a simulação atual e inicia uma nova execução imediatamente usando as configurações vigentes.
-- **Configurações**: Abre a tela de parâmetros (somente quando a simulação estiver parada).
-- **Exportar CSV**: Salva o histórico populacional (disponível quando pausado).
-- **Sobre**: Informações de autoria e versão do software.
-
----
-
-## Configurando a Simulação
-
-Clicando em **Configurações** (com a simulação parada), você pode ajustar os seguintes parâmetros:
-- **Largura e Altura**: O tamanho da grade de simulação.
-- **Intervalo do Timer (ms)**: A velocidade da simulação.
-- **Bactérias Iniciais (%)**: A densidade inicial de bactérias no tabuleiro ao iniciar.
-- **Entrada e Quantidade das Espécies**: Parâmetros de introdução programada para Plantas, Vegetarianos e Carnívoros.
-- **Limite Fome**: Limites de sobrevivência sem comida para Vegetarianos e Carnívoros.
-- **Intervalo e Limite de Histórico**: Controla a taxa de amostragem do histórico (ex: registrar a cada ciclo ou a cada N ciclos) e o número máximo de pontos mantidos na memória (padrão de 10.000 para evitar lentidão ou consumo excessivo de RAM).
-- **Seed Aleatória**: Semente do gerador de números aleatórios.
+| Cor | Tipo |
+|---|---|
+| Preto | Célula vazia |
+| Amarelo | Bactéria |
+| Verde | Planta |
+| Azul | Herbívoro / vegetariano |
+| Vermelho | Carnívoro |
+| Marrom | Matéria orgânica |
 
 ---
 
-## Exportando Dados Populacionais
+## Contadores exibidos
 
-Ao pausar a simulação e clicar em **Exportar CSV**, o sistema gera dois arquivos de relatório na pasta `docs`:
+O painel lateral mostra:
 
-1. **`exemplo_saida.csv`**: Histórico populacional geral, contendo as populações das espécies principais, contadores específicos de subtipos (tamanho, toxicidade, etc.) e as métricas de biodiversidade de espécies/subespécies vivas, extintas e causas de morte.
-2. **`biodiversidade.csv`**: Relatório detalhado por subespécie contendo a série temporal de indivíduos vivos, mortos e se está extinta em cada ciclo.
+- ciclo atual;
+- quantidade de bactérias;
+- quantidade de plantas;
+- quantidade de herbívoros / vegetarianos;
+- quantidade de carnívoros;
+- quantidade de matéria orgânica;
+- tempo do último ciclo;
+- FPS aproximado.
 
-Ambos os relatórios utilizam separadores de vírgula e formato numérico com ponto decimal, ideal para importação e análise em planilhas eletrônicas.
+A versão atual **não possui abas**, **não possui gráfico histórico** e **não possui painel de subespécies**.
 
+---
+
+## Botões disponíveis
+
+### Iniciar
+
+Liga o timer da simulação e começa a executar ciclos.
+
+### Pausar
+
+Desliga temporariamente o timer. A simulação permanece no estado atual.
+
+### Parar
+
+Interrompe a simulação, descarta o estado atual e cria uma nova simulação com a configuração padrão.
+
+### Reiniciar
+
+Cria uma nova simulação usando a configuração padrão.
+
+### Configurações
+
+Na versão atual, este botão apenas informa que a configuração está definida na unit `uConfig.pas`.
+
+Ainda não existe uma tela visual de configuração.
+
+### Exportar CSV
+
+Exporta um arquivo chamado:
+
+```text
+export_form.csv
+```
+
+O arquivo contém apenas um resumo do estado atual, com:
+
+- ciclo;
+- bactérias;
+- plantas;
+- herbívoros;
+- carnívoros;
+- matéria orgânica;
+- células vazias.
+
+A versão atual **não exporta histórico completo por ciclo**.
+
+### Sobre
+
+Mostra uma mensagem simples sobre o projeto.
+
+---
+
+## Configuração da simulação
+
+Os parâmetros atuais ficam no arquivo:
+
+```text
+uConfig.pas
+```
+
+A configuração padrão define valores como:
+
+- largura da grade;
+- altura da grade;
+- porcentagem inicial de bactérias;
+- porcentagem inicial de plantas;
+- porcentagem inicial de herbívoros;
+- porcentagem inicial de carnívoros;
+- vida máxima por tipo;
+- fome máxima de herbívoros e carnívoros;
+- ciclos de reprodução;
+- tempo de degradação da matéria orgânica;
+- ciclo de entrada dos carnívoros.
+
+---
+
+## Como usar
+
+1. Abra o projeto `animal.lpi` no Lazarus.
+2. Compile e execute.
+3. Clique em **Iniciar**.
+4. Observe a evolução das populações no painel lateral.
+5. Use **Pausar** para congelar o estado atual.
+6. Use **Exportar CSV** para gravar o resumo atual.
+7. Use **Reiniciar** ou **Parar** para recomeçar a simulação.
+
+---
+
+## Limitações da versão atual
+
+A versão atual ainda não possui:
+
+- tela visual de configuração;
+- gráfico populacional;
+- histórico completo por ciclo;
+- subespécies;
+- mutações complexas;
+- relatório detalhado de mortes;
+- salvamento e carregamento de cenários;
+- integração completa com todos os componentes `AI Simulation` da biblioteca `CHATGPT`.
+
+Esses itens são candidatos naturais para evolução futura.
