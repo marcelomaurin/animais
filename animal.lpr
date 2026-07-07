@@ -10,8 +10,7 @@ uses
   athreads,
   {$ENDIF}
   Interfaces, // this includes the LCL widgetset
-  Forms, form2, uTiposAnimais, uSeres, uTabuleiro, uSimulacao, uEstatisticas,
-  uFormConfig;
+  Forms, form2, uConfig, uTipos, uTabuleiro, uSimulacao, uEstat;
 
 {$R *.res}
 
@@ -25,4 +24,3 @@ begin
   Application.CreateForm(TForm2, frmform2);
   Application.Run;
 end.
-

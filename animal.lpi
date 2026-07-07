@@ -26,7 +26,7 @@
     </RunParams>
     <RequiredPackages>
       <Item>
-        <PackageName Value="TAChartLazarusPkg"/>
+        <PackageName Value="openai_simulation"/>
       </Item>
       <Item>
         <PackageName Value="LCL"/>
@@ -46,37 +46,24 @@
         <UnitName Value="Form2"/>
       </Unit>
       <Unit>
-        <Filename Value="uTiposAnimais.pas"/>
+        <Filename Value="uTipos.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="uTiposAnimais"/>
-      </Unit>
-      <Unit>
-        <Filename Value="uSeres.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="uSeres"/>
       </Unit>
       <Unit>
         <Filename Value="uTabuleiro.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="uTabuleiro"/>
       </Unit>
       <Unit>
         <Filename Value="uSimulacao.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="uSimulacao"/>
       </Unit>
       <Unit>
-        <Filename Value="uEstatisticas.pas"/>
+        <Filename Value="uConfig.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="uEstatisticas"/>
       </Unit>
       <Unit>
-        <Filename Value="uFormConfig.pas"/>
+        <Filename Value="uEstat.pas"/>
         <IsPartOfProject Value="True"/>
-        <ComponentName Value="frmConfig"/>
-        <HasResources Value="True"/>
-        <ResourceBaseClass Value="Form"/>
-        <UnitName Value="uFormConfig"/>
       </Unit>
     </Units>
   </ProjectOptions>
@@ -88,6 +75,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
+      <OtherUnitFiles Value="P:\maurinsoft\CHATGPT\pacote\AI\;P:\maurinsoft\CHATGPT\pacote\AI Simulation\"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Linking>
