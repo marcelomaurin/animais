@@ -1,78 +1,106 @@
-# Animaux — Simulation d'Écosystème Simplifié (Lazarus / Free Pascal)
+# Animaux — Simulation d'Écosystème Simplifié
 
-**Animaux** est une simulation visuelle d'écosystème basée sur des agents développée en **Lazarus / Free Pascal**. Le projet est intégré à la bibliothèque **CHATGPT** (en utilisant spécifiquement les composants de simulation du package `openai_simulation`), démontrant l'application pratique des grilles cellulaires, des règles évolutives et d'un cycle à double tampon stable.
+**Animaux** est une simulation visuelle d'écosystème développée avec **Lazarus / Free Pascal**.
 
----
+Le projet démontre un environnement en grille 2D avec des êtres simples, des règles de survie, d'alimentation, de reproduction, de mort, de matière organique et des statistiques de base en temps réel.
 
-## Idiomas / Languages
-
-- [Português (PT-BR)](README.md)
-- [English (EN)](README_EN.md)
-- [Español (ES)](README_ES.md)
-- [Français (FR)](README_FR.md)
-- [中文 (ZH)](README_ZH.md)
-- [العربية (AR)](README_AR.md)
+Il sert aussi de démo pratique de la bibliothèque [`CHATGPT`](https://github.com/marcelomaurin/CHATGPT), car le projet dépend du package `openai_simulation` et la classe `TSer` hérite de `TAISimEntity`.
 
 ---
 
-## Fonctionnalités
+## État actuel du projet
 
-La simulation modélise la dynamique de survie et de reproduction d'un écosystème simplifié sur une grille bidimensionnelle de $80 \times 80$. Le système est régi par 5 types d'entités :
+Cette version est une simulation **simplifiée et fonctionnelle**, centrée sur :
 
-| Type | Couleur | Comportement |
+- une grille bidimensionnelle ;
+- des agents/êtres vivants représentés par des objets ;
+- un cycle de simulation piloté par timer ;
+- l'alimentation entre espèces ;
+- la reproduction ;
+- la mort par âge ou par faim ;
+- la transformation des êtres morts en matière organique ;
+- la dégradation de la matière organique en bactéries ;
+- un rendu visuel simple ;
+- des compteurs de population ;
+- l'exportation d'un résumé CSV simple.
+
+Les sous-espèces, graphiques historiques, mutations complexes, écrans visuels de configuration et panneaux avancés de biodiversité **ne sont pas implémentés dans le code actuel**. Ils doivent être considérés comme des améliorations futures.
+
+---
+
+## Entités de la simulation
+
+| Type | Couleur dans l'interface | Comportement actuel |
 |---|---|---|
-| **Plante** | Vert | Ressource primaire, se reproduit après quelques cycles s'il y a de l'espace. |
-| **Herbivore** | Bleu | Se déplace et se nourrit de plantes. Meurt de vieillesse ou d'inanition (faim). |
-| **Carnivore** | Rouge | Introduit au cycle 200, se nourrit d'herbivores. Meurt de vieillesse ou de faim. |
-| **Matière Organique** | Marron | Générée par la mort de plantes, d'herbivores ou de carnivores. Se dégrade après quelques cycles. |
-| **Bactérie** | Jaune | Apparaît lors de la dégradation de la matière organique, consomme la matière et se reproduit. |
+| **Bactérie** | Jaune | Peut consommer la matière organique, se déplacer aléatoirement et se reproduire. |
+| **Plante** | Vert | Sert de nourriture aux herbivores et peut se reproduire. |
+| **Herbivore** | Bleu | Mange les plantes, se déplace et meurt par âge ou par faim. |
+| **Carnivore** | Rouge | Entre au cycle configuré, mange les herbivores et meurt par âge ou par faim. |
+| **Matière organique** | Marron | Provient des plantes, herbivores et carnivores morts ; se dégrade ensuite en bactéries. |
 
 ---
 
-## Principes de Conception & Stabilité
+## Structure du code
 
-Cette version a été entièrement restructurée pour assurer la stabilité et éviter les fuites de mémoire (Access Violations et Double-Frees) :
-
-1. **Double Tampon Sécurisé** : La grille (`TTabuleiro`) gère `FBoard` (état actif) et `FNextBoard` (état suivant). Toutes les modifications sont écrites dans `FNextBoard` et appliquées à la fin de chaque cycle.
-2. **Propriété Unique** : Un objet vivant (`TSer`) appartient à un seul tampon à la fois.
-3. **Libération de Mémoire Sécurisée** : Les entités mourantes sont marquées avec `Morto := True` et retirées de la simulation active. La libération de mémoire (`Free`) est gérée exclusivement pendant la phase de `Commit` de la grille.
-4. **Graine Fixe** : Utilise une graine pseudo-aléatoire fixe lors de l'initialisation pour la reproductibilité scientifique.
-
----
-
-## Intégration avec la bibliothèque CHATGPT
-
-La classe fondamentale `TSer` (dans `uTipos.pas`) hérite directement de `TAISimEntity` du package `openai_simulation`. Cela permet d'utiliser l'écosystème comme un environnement simulé pour l'entraînement de modèles d'IA, la prise de décision par agents logiques et l'analyse de données écologiques.
+| Fichier | Responsabilité |
+|---|---|
+| `animal.lpr` | Programme Lazarus principal. |
+| `animal.lpi` | Fichier de projet Lazarus, avec dépendance à `openai_simulation`. |
+| `form2.pas` / `form2.lfm` | Interface visuelle principale, timer, dessin et export CSV. |
+| `uTipos.pas` | Définit `TTipo` et `TSer`, qui hérite de `TAISimEntity`. |
+| `uConfig.pas` | Définit `TConfig` et les paramètres par défaut. |
+| `uTabuleiro.pas` | Implémente la grille avec `FBoard` et `FNextBoard`. |
+| `uSimulacao.pas` | Implémente les règles écologiques et le cycle de simulation. |
+| `uEstat.pas` | Définit le record `TEstat` utilisé pour les compteurs de population. |
 
 ---
 
-## Structure du Code
+## Relation avec la bibliothèque CHATGPT
 
-* **`uTipos.pas`** : Classe `TSer` étendant `TAISimEntity`.
-* **`uTabuleiro.pas`** : Gestionnaire de grille avec double tampon et gestion de mémoire sécurisée.
-* **`uConfig.pas`** : Enregistrement `TConfig` avec des paramètres écologiques calibrés.
-* **`uSimulacao.pas`** : Moteur central qui traite les étapes de simulation et applique les règles biologiques.
-* **`uEstat.pas`** : Enregistrement statistique de comptage de population par cycle.
-* **`form2.pas` / `form2.lfm`** : Interface de contrôle visuel avec boutons Démarrer, Pause, Arrêter, Réinitialiser et exportation CSV.
+Ce projet est un exemple de ce qui peut être construit avec la bibliothèque [`CHATGPT`](https://github.com/marcelomaurin/CHATGPT), en particulier avec la zone **AI Simulation**.
+
+Dans la version actuelle, l'intégration reste minimale :
+
+- le projet Lazarus dépend de `openai_simulation` ;
+- `TSer` hérite de `TAISimEntity` ;
+- la structure suit les concepts de simulation : entités, grille, cycles et métriques.
+
+Le projet sert de base didactique pour évoluer vers une utilisation plus complète des composants `AI Simulation`.
 
 ---
 
-## Comment Compiler et Exécuter
+## Compilation
 
 ### Prérequis
-- Lazarus IDE
-- Free Pascal Compiler (FPC)
-- Bibliothèque CHATGPT (dossier `pacote` accessible dans les chemins de recherche définis dans `.lpi`)
 
-### Compilation
-Ouvrez le terminal dans le répertoire du projet et exécutez :
+- Lazarus IDE ;
+- Free Pascal Compiler ;
+- copie locale de [`CHATGPT`](https://github.com/marcelomaurin/CHATGPT) ;
+- package `openai_simulation` installé ou visible par Lazarus.
+
+### Construire
+
 ```bash
+git clone https://github.com/marcelomaurin/animais.git
+cd animais
 lazbuild animal.lpi
 ```
 
-Ou ouvrez `animal.lpi` directement dans l'IDE Lazarus et appuyez sur **F9**.
+Ou ouvrez `animal.lpi` dans Lazarus et compilez depuis l'IDE.
+
+---
+
+## Limitations actuelles
+
+- La configuration est statique dans `uConfig.pas`.
+- L'export CSV est seulement un snapshot simple.
+- Il n'y a pas encore d'historique complet par cycle.
+- Il n'y a pas de graphiques ni d'onglets.
+- Il n'y a pas de sous-espèces ni de mutations avancées dans le code actuel.
+- Le projet n'utilise pas encore tous les composants de `AI Simulation`.
 
 ---
 
 ## Licence
-Ce projet est sous licence **GPL-3.0**.
+
+Ce projet est distribué sous licence **GPL-3.0**.
