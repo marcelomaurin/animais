@@ -20,8 +20,8 @@ begin
   Cfg := ConfigPadrao;
   // Config 80x80 = 6400 celulas
   // Bacteria: 8% = 512
-  // Planta: 15% = 960
-  // Herbivoro: 2% = 128
+  // Planta: 36% = 2304
+  // Herbivoro: 3% = 192
   
   Sim := TSimulacao.Create(Cfg);
   try
@@ -50,9 +50,9 @@ begin
     
     WriteLn('Contagem observada no tabuleiro:');
     WriteLn('Bacterias: ', ContBacteria, ' (esperado ~512)');
-    WriteLn('Plantas: ', ContPlanta, ' (esperado ~960)');
-    WriteLn('Herbivoros: ', ContHerbivoro, ' (esperado ~128)');
-    WriteLn('Vazios: ', ContVazio, ' (esperado ~4800)');
+    WriteLn('Plantas: ', ContPlanta, ' (esperado ~2304)');
+    WriteLn('Herbivoros: ', ContHerbivoro, ' (esperado ~192)');
+    WriteLn('Vazios: ', ContVazio, ' (esperado ~3392)');
     
   finally
     Sim.Free;

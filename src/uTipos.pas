@@ -22,6 +22,8 @@ type
     Repro: Integer;
     ReproMax: Integer;
     Morto: Boolean;
+    // True quando comeu desde a ultima reproducao (exigido para reproduzir)
+    Alimentado: Boolean;
 
     constructor CreateSer(ATipo: TTipo; AVidaMax, AFomeMax, AReproMax: Integer);
   end;
@@ -41,6 +43,7 @@ begin
   Fome := 0;
   Repro := 0;
   Morto := False;
+  Alimentado := False;
 end;
 
 end.

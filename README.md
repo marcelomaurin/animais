@@ -1,109 +1,90 @@
-# Animais — Simulação de Ecossistema Simplificado
+# Animais — um ecossistema em uma grade
 
-**Animais** é uma simulação visual de ecossistema desenvolvida em **Lazarus / Free Pascal**.
+**Animais** é uma simulação visual de ecossistema feita em **Lazarus / Free Pascal**. Plantas, herbívoros, carnívoros e bactérias dividem uma grade de 80 × 80 células: comem, passam fome, se reproduzem, morrem e viram matéria orgânica, que as bactérias decompõem. Tudo isso com meia dúzia de regras simples, e o resultado é um mundo que oscila, se reorganiza e, com os parâmetros certos, se mantém vivo por milhares de ciclos.
 
-O projeto demonstra um ambiente em grade 2D com seres simples, regras de sobrevivência, alimentação, reprodução, morte, matéria orgânica e estatísticas básicas em tempo real.
+![Tela principal do Animais](docs/imagens/tela_principal.png)
 
-Ele também funciona como um **demo prático do pacote [`CHATGPT`](https://github.com/marcelomaurin/CHATGPT)**, pois o projeto depende do pacote `openai_simulation` e a classe `TSer` herda de `TAISimEntity`.
-
----
-
-## Estado atual do projeto
-
-Esta versão é uma simulação **simplificada e funcional**, com foco em demonstrar:
-
-- uso de uma grade bidimensional;
-- agentes/seres vivos representados por objetos;
-- ciclo de simulação por timer;
-- alimentação entre espécies;
-- reprodução;
-- morte por idade ou fome;
-- transformação de seres mortos em matéria orgânica;
-- degradação da matéria orgânica em bactéria;
-- renderização visual simples;
-- contagem populacional;
-- exportação de um resumo CSV.
-
-Recursos como subespécies, gráficos históricos, mutações avançadas e painéis complexos de biodiversidade **não fazem parte do código atual**. Eles podem ser tratados como evolução futura.
+Outros idiomas: [English](README_EN.md) · [Español](README_ES.md) · [Français](README_FR.md) · [العربية](README_AR.md) · [中文](README_ZH.md)
 
 ---
 
-## Entidades da simulação
+## Objetivos
 
-A simulação trabalha com cinco tipos principais:
-
-| Tipo | Cor na interface | Comportamento atual |
-|---|---|---|
-| **Bactéria** | Amarelo | Pode consumir matéria orgânica, mover-se aleatoriamente e reproduzir-se. |
-| **Planta** | Verde | Serve de alimento para herbívoros e pode reproduzir-se. |
-| **Herbívoro** | Azul | Alimenta-se de plantas, move-se e morre por idade ou fome. |
-| **Carnívoro** | Vermelho | Entra no ciclo configurado, alimenta-se de herbívoros e morre por idade ou fome. |
-| **Matéria orgânica** | Marrom | Surge da morte de plantas, herbívoros e carnívoros; após degradar, vira bactéria. |
+1. **Mostrar que regras simples geram comportamento complexo.** Nenhum ser "sabe" do ecossistema; cada um só olha as oito células ao redor. Mesmo assim surgem manchas de vegetação, frentes de herbívoros e ciclos de presa e predador.
+2. **Ser um laboratório de equilíbrio ecológico.** Todos os parâmetros são editáveis na tela. Dá para testar o que acontece quando os herbívoros vivem mais, quando os carnívoros entram cedo demais ou quando as plantas demoram a se espalhar, e acompanhar o efeito no gráfico.
+3. **Servir de exemplo de simulação baseada em agentes em Lazarus.** O motor é pequeno, separado da interface e legível: tipos, tabuleiro, regras, estatísticas e tela ficam cada um em sua unidade.
+4. **Demonstrar a biblioteca [`CHATGPT`](https://github.com/marcelomaurin/CHATGPT).** O projeto depende do pacote `openai_simulation` e cada ser herda de `TAISimEntity`. É o ponto de partida para evoluir em direção aos componentes completos da área **AI Simulation**.
 
 ---
 
-## Funcionamento do ciclo
+## Quem vive no tabuleiro
 
-A classe `TSimulacao` controla o ciclo principal.
+| Cor | Tipo | Papel | Come | Ao morrer de idade ou fome |
+|---|---|---|---|---|
+| Verde | **Planta** | Produtor | nada | vira matéria orgânica |
+| Azul claro | **Herbívoro** | Consumidor | plantas | vira matéria orgânica |
+| Laranja-avermelhado | **Carnívoro** | Predador | herbívoros | vira matéria orgânica |
+| Amarelo | **Bactéria** | Decompositor | matéria orgânica | apenas some |
+| Marrom | **Matéria orgânica** | Resto de ser morto | nada | vira bactéria ao degradar |
 
-A cada ciclo:
+São duas cadeias que se fecham uma na outra:
 
-1. o contador de ciclo é incrementado;
-2. carnívoros são introduzidos quando o ciclo configurado é atingido;
-3. o próximo estado do tabuleiro é preparado;
-4. cada célula ativa é processada;
-5. idade, fome, alimentação, movimento e reprodução são avaliados;
-6. o próximo estado é confirmado no tabuleiro;
-7. a interface redesenha a grade e atualiza os contadores.
+```text
+Planta viva  ->  Herbívoro  ->  Carnívoro
+Ser morto    ->  Matéria orgânica  ->  Bactéria
+```
 
----
-
-## Estrutura de código
-
-| Arquivo | Responsabilidade |
-|---|---|
-| `animal.lpr` | Programa principal Lazarus. Carrega o formulário e as units do projeto. |
-| `animal.lpi` | Arquivo de projeto Lazarus. Declara dependência do pacote `openai_simulation`. |
-| `form2.pas` / `form2.lfm` | Interface visual principal: desenho do tabuleiro, botões, timer e exportação. |
-| `uTipos.pas` | Define `TTipo` e a classe `TSer`, que herda de `TAISimEntity`. |
-| `uConfig.pas` | Define `TConfig` e os parâmetros padrão da simulação. |
-| `uTabuleiro.pas` | Implementa a grade com `FBoard` e `FNextBoard`. |
-| `uSimulacao.pas` | Implementa o motor de regras ecológicas e o ciclo da simulação. |
-| `uEstat.pas` | Define o record `TEstat` usado para contagem populacional. |
+A bactéria não come planta viva; ela vive do que morre.
 
 ---
 
-## Interface atual
+## As regras
 
-A tela principal possui:
+A cada ciclo, todo ser vivo é processado uma vez, nesta ordem:
 
-- área visual do tabuleiro;
-- painel lateral com contadores;
-- botão **Iniciar**;
-- botão **Pausar**;
-- botão **Parar**;
-- botão **Reiniciar**;
-- botão **Configurações**;
-- botão **Exportar CSV**;
-- botão **Sobre**.
+1. **Envelhece.** Ao atingir a vida máxima do seu tipo, morre. Plantas e animais viram matéria orgânica; bactérias somem.
+2. **Come.** Procura uma presa nas oito células vizinhas. Se encontra, a presa some, a fome volta a zero e o ser ocupa o lugar dela.
+3. **Passa fome.** Animais e bactérias que não comeram no ciclo acumulam fome. Ao atingir a fome máxima, morrem.
+4. **Anda.** Quem não comeu tem 20% de chance de dar um passo para uma célula vizinha livre. Plantas não andam.
+5. **Se reproduz.** Quando o contador de reprodução chega ao valor do tipo e há uma célula vizinha livre, nasce um filho. A planta só depende do tempo; **animais e bactérias precisam ter comido** desde a última reprodução.
 
-A configuração ainda é estática e fica definida na unit `uConfig.pas`. O botão **Configurações** apenas informa isso ao usuário.
+Regras de apoio:
 
-O botão **Exportar CSV** grava um arquivo simples chamado `export_form.csv`, contendo o estado populacional atual.
+- A **matéria orgânica** não faz nada além de degradar: depois de alguns ciclos, vira uma bactéria.
+- Os **carnívoros entram depois**, em um ciclo configurável (200 no padrão), para dar tempo de plantas e herbívoros se estabelecerem. Se forem extintos, não voltam.
+- Cada célula comporta **um ser**. Sem espaço livre ao redor, ninguém nasce.
+- O motor é **determinístico**: a mesma semente produz sempre a mesma história.
+
+A descrição completa, com os detalhes de implementação, está em [`docs/REGRAS_JOGO_DA_VIDA_MODIFICADO.md`](docs/REGRAS_JOGO_DA_VIDA_MODIFICADO.md).
+
+### Parâmetros padrão
+
+| Parâmetro | Bactéria | Planta | Herbívoro | Carnívoro |
+|---|---|---|---|---|
+| Proporção inicial | 8% | 36% | 3% | 2,6% |
+| Vida máxima (ciclos) | 13 | 38 | 37 | 74 |
+| Fome máxima (ciclos) | 3 | — | 5 | 25 |
+| Ciclos para reproduzir | 5 | 3 | 17 | 11 |
+
+A matéria orgânica degrada em 7 ciclos. Com esses valores, os quatro grupos permaneceram vivos aos 10.000 ciclos nas dez sementes testadas (0 a 9). O equilíbrio é sensível: pequenas mudanças podem extinguir um grupo, e descobrir quais é parte da graça.
 
 ---
 
-## Relação com a biblioteca CHATGPT
+## A tela
 
-Este projeto é um exemplo do que pode ser feito usando a biblioteca [`CHATGPT`](https://github.com/marcelomaurin/CHATGPT), especialmente a área **AI Simulation**.
+- **Tabuleiro** à esquerda, redesenhado a cada ciclo.
+- **Controles:** Iniciar/Pausar, Avançar 1 ciclo, Reiniciar e velocidade (1×, 4×, 16×).
+- **Cartões** de ciclo, semente e tempo médio por ciclo.
+- **População:** quantidade, percentual e barra de cada grupo, incluindo células vazias.
+- **Histórico:** gráfico dos últimos 600 ciclos em escala logarítmica, para que grupos pequenos e grandes apareçam juntos.
+- **Configurações:** tela para editar todos os parâmetros; aplicar reinicia a simulação.
+- **Exportar histórico:** grava um CSV com uma linha por ciclo.
 
-No estado atual, o projeto ainda não usa todos os componentes de simulação da biblioteca. A integração principal está em:
+Atalhos: **Espaço** inicia ou pausa, **seta para a direita** avança um ciclo e **R** reinicia.
 
-- dependência do pacote `openai_simulation` no projeto Lazarus;
-- classe `TSer` herdando de `TAISimEntity`;
-- estrutura conceitual compatível com simulações baseadas em entidades, grade, ciclos e métricas.
+Cada simulação usa uma semente sorteada, exibida no cartão **Semente**. Para repetir uma execução, informe esse número no campo Semente das configurações.
 
-Assim, o repositório serve como uma base didática para evoluir uma simulação própria em direção ao uso mais completo dos componentes de `AI Simulation` do projeto `CHATGPT`.
+![Tela de configurações](docs/imagens/configuracoes.png)
 
 ---
 
@@ -111,45 +92,84 @@ Assim, o repositório serve como uma base didática para evoluir uma simulação
 
 ### Requisitos
 
-- Lazarus IDE;
-- Free Pascal Compiler;
-- biblioteca [`CHATGPT`](https://github.com/marcelomaurin/CHATGPT) disponível localmente;
-- pacote `openai_simulation` instalado ou acessível ao Lazarus.
+- Lazarus e Free Pascal;
+- biblioteca [`CHATGPT`](https://github.com/marcelomaurin/CHATGPT), com o pacote `openai_simulation` instalado ou acessível ao Lazarus.
 
 ### Passos
 
 ```bash
 git clone https://github.com/marcelomaurin/animais.git
 cd animais
-lazbuild animal.lpi
+lazbuild src/animal.lpi
 ```
 
-Ou abra `animal.lpi` no Lazarus e compile pela IDE.
+Ou abra `src/animal.lpi` no Lazarus e compile pela IDE. O executável é gravado em `bin/`.
+
+O projeto procura a biblioteca `CHATGPT` em uma pasta irmã (`..\..\CHATGPT` a partir de `src`). Em outra disposição, ajuste o caminho no `.lpi`.
+
+### Gerar o instalador (Windows)
+
+Com o Lazarus e o [Inno Setup 6](https://jrsoftware.org/isinfo.php) instalados, execute na raiz do projeto:
+
+```bat
+gerar_instalador.bat
+```
+
+O roteiro compila `src\animal.lpi` e gera `bin\Animais-1.0.0-instalador.exe`. A versão é definida no início de `instalador\animais.iss`, que também pode ser aberto e compilado direto no Inno Setup.
 
 ---
 
-## Pontos de atenção
+## Estrutura do projeto
 
-- O caminho do pacote `CHATGPT` no arquivo `.lpi` pode precisar ser ajustado conforme a máquina do desenvolvedor.
-- A simulação atual usa configuração estática em `uConfig.pas`.
-- A exportação CSV atual é apenas um snapshot simples, não um histórico completo.
-- A documentação antiga mencionava subespécies, gráficos e relatórios avançados; esses recursos não correspondem ao código atual.
+| Pasta | Conteúdo |
+|---|---|
+| `src/` | Fontes, projeto Lazarus, ícone e programas de teste. |
+| `bin/` | Executável e instalador gerados. |
+| `instalador/` | Roteiro do instalador para o Inno Setup (`animais.iss`). |
+| `docs/` | Documentação e imagens. |
+
+Principais arquivos em `src/`:
+
+| Arquivo | Responsabilidade |
+|---|---|
+| `animal.lpr` / `animal.lpi` | Programa principal e projeto Lazarus. |
+| `uTipos.pas` | Tipos de ser e a classe `TSer`, que herda de `TAISimEntity`. |
+| `uConfig.pas` | `TConfig` e os parâmetros padrão. |
+| `uTabuleiro.pas` | Grade com dois estados (atual e próximo). |
+| `uSimulacao.pas` | Motor de regras e ciclo da simulação. |
+| `uEstat.pas` | Contagem populacional. |
+| `form2.pas` / `form2.lfm` | Tela principal, desenhada em código. |
+| `uFormConfig.pas` | Tela de configurações. |
+| `teste1.lpr` a `teste7.lpr` | Programas de teste do motor. |
 
 ---
 
-## Próximos passos sugeridos
+## Documentação
 
-1. Criar uma tela real de configuração em vez de mensagem estática.
-2. Gravar histórico por ciclo e exportar CSV completo.
-3. Adicionar gráficos populacionais.
-4. Evoluir `TSer` para usar mais propriedades de `TAISimEntity`.
-5. Aproximar `TTabuleiro` dos componentes `TAIGridWorld` e `TAIGridCell`.
-6. Trocar regras fixas por um motor de regras configurável.
-7. Criar salvamento/carregamento de cenários em JSON.
-8. Adicionar testes ou rotina de validação de ciclo.
+- [Regras da simulação](docs/REGRAS_JOGO_DA_VIDA_MODIFICADO.md)
+- [Guia do usuário](docs/GUIA_USUARIO.md)
+- [Guia do desenvolvedor](docs/GUIA_DESENVOLVEDOR.md)
+- [Análise técnica](docs/ANALISE_TECNICA.md)
+- [Roteiro de desenvolvimento](docs/ROADMAP.md)
+
+---
+
+## Limitações atuais
+
+- As configurações alteradas na tela não são gravadas em disco.
+- Os botões da tela principal são desenhados, não controles da LCL; por isso os atalhos de teclado.
+- Subespécies, mutações e cenários pré-configurados não fazem parte do código.
+- A integração com `openai_simulation` ainda é mínima: herança de `TAISimEntity`.
+
+## Próximos passos
+
+1. Gravar e carregar configurações e cenários em arquivo.
+2. Aproximar o tabuleiro dos componentes `TAIGridWorld` e `TAIGridCell`.
+3. Trocar regras fixas por um motor de regras configurável.
+4. Transformar os programas de teste em testes com verificação automática.
 
 ---
 
 ## Licença
 
-Este projeto é distribuído sob a licença **GPL-3.0**.
+Distribuído sob a licença **MIT**. Veja o arquivo [`LICENSE`](LICENSE).

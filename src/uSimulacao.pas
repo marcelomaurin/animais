@@ -79,7 +79,7 @@ procedure TSimulacao.Semear;
   end;
 
 begin
-  SemearTipo(tBacteria, FCfg.PctBacteria, FCfg.VidaBacteria, 0, FCfg.ReproBacteria);
+  SemearTipo(tBacteria, FCfg.PctBacteria, FCfg.VidaBacteria, FCfg.FomeBacteria, FCfg.ReproBacteria);
   SemearTipo(tPlanta, FCfg.PctPlanta, FCfg.VidaPlanta, 0, FCfg.ReproPlanta);
   SemearTipo(tHerbivoro, FCfg.PctHerbivoro, FCfg.VidaHerbivoro, FCfg.FomeHerbivoro, FCfg.ReproHerbivoro);
 end;
@@ -185,8 +185,10 @@ begin
         TargetY := Y + DY;
         if FTab.InBounds(TargetX, TargetY) then
         begin
-          SerVizinho := FTab.GetSer(TargetX, TargetY);
-          if (SerVizinho <> nil) and (not SerVizinho.Morto) and (SerVizinho.Tipo = ATipoPrey) then
+          // Considera tambem quem ja foi processado neste ciclo (proximo
+          // tabuleiro); sem isso a presa so era vista em 4 das 8 direcoes.
+          SerVizinho := FTab.GetSerVivo(TargetX, TargetY);
+          if (SerVizinho <> nil) and (SerVizinho.Tipo = ATipoPrey) then
           begin
             Posicoes[Cont] := Point(TargetX, TargetY);
             Inc(Cont);
@@ -217,6 +219,7 @@ begin
     ASer.Morto := False;
     ASer.Fome := 0;
     ASer.Repro := 0;
+    ASer.Alimentado := False;
     FTab.Colocar(ASer, X, Y);
   end;
 end;
@@ -250,10 +253,11 @@ begin
       Ser.Tipo := tBacteria;
       Ser.Idade := 0;
       Ser.VidaMax := FCfg.VidaBacteria;
-      Ser.FomeMax := 0;
+      Ser.FomeMax := FCfg.FomeBacteria;
       Ser.ReproMax := FCfg.ReproBacteria;
       Ser.Fome := 0;
       Ser.Repro := 0;
+      Ser.Alimentado := False;
       Ser.Morto := False;
     end;
     FTab.Mover(X, Y, X, Y); // Fica parado
@@ -269,6 +273,7 @@ begin
     begin
       FTab.MarcarMorto(PreyX, PreyY);
       Ser.Fome := 0;
+      Ser.Alimentado := True;
       FTab.Mover(X, Y, PreyX, PreyY);
       Movido := True;
     end;
@@ -279,6 +284,7 @@ begin
     begin
       FTab.MarcarMorto(PreyX, PreyY);
       Ser.Fome := 0;
+      Ser.Alimentado := True;
       FTab.Mover(X, Y, PreyX, PreyY);
       Movido := True;
     end;
@@ -289,18 +295,22 @@ begin
     begin
       FTab.MarcarMorto(PreyX, PreyY);
       Ser.Fome := 0;
+      Ser.Alimentado := True;
       FTab.Mover(X, Y, PreyX, PreyY);
       Movido := True;
     end;
   end;
 
-  // 3. Fome
-  if (Ser.Tipo in [tHerbivoro, tCarnivoro]) and (not Movido) then
+  // 3. Fome (quem nao comeu neste ciclo). FomeMax = 0 desliga a fome.
+  if (Ser.Tipo in [tHerbivoro, tCarnivoro, tBacteria]) and (not Movido) and (Ser.FomeMax > 0) then
   begin
     Inc(Ser.Fome);
     if Ser.Fome >= Ser.FomeMax then
     begin
-      MorrerVirandoMateria(X, Y, Ser);
+      if Ser.Tipo = tBacteria then
+        Ser.Morto := True // bacteria apenas some; liberada no Commit
+      else
+        MorrerVirandoMateria(X, Y, Ser);
       Exit;
     end;
   end;
@@ -325,9 +335,10 @@ begin
     FTab.Mover(X, Y, X, Y);
   end;
 
-  // 5. Reproduzir
+  // 5. Reproduzir. A planta depende so do contador; os demais precisam
+  // ter comido desde a ultima reproducao.
   Inc(Ser.Repro);
-  if Ser.Repro >= Ser.ReproMax then
+  if (Ser.Repro >= Ser.ReproMax) and ((Ser.Tipo = tPlanta) or Ser.Alimentado) then
   begin
     // Procura vizinho livre a partir de onde o ser esta agora (no FNextBoard)
     if ObterVizinhosLivresNext(Ser.X, Ser.Y, FilhoX, FilhoY) then
@@ -339,7 +350,7 @@ begin
       else if Ser.Tipo = tCarnivoro then
         Filho := TSer.CreateSer(tCarnivoro, FCfg.VidaCarnivoro, FCfg.FomeCarnivoro, FCfg.ReproCarnivoro)
       else if Ser.Tipo = tBacteria then
-        Filho := TSer.CreateSer(tBacteria, FCfg.VidaBacteria, 0, FCfg.ReproBacteria)
+        Filho := TSer.CreateSer(tBacteria, FCfg.VidaBacteria, FCfg.FomeBacteria, FCfg.ReproBacteria)
       else
         Filho := nil;
 
@@ -347,6 +358,7 @@ begin
       begin
         FTab.Colocar(Filho, FilhoX, FilhoY);
         Ser.Repro := 0;
+        Ser.Alimentado := False;
       end;
     end;
   end;

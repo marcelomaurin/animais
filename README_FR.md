@@ -103,4 +103,4 @@ Ou ouvrez `animal.lpi` dans Lazarus et compilez depuis l'IDE.
 
 ## Licence
 
-Ce projet est distribué sous licence **GPL-3.0**.
+Ce projet est distribué sous licence **MIT**.

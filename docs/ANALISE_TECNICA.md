@@ -33,7 +33,8 @@ A arquitetura atual é pequena e direta:
 |---|---|
 | `animal.lpr` | Inicializa a aplicação Lazarus. |
 | `animal.lpi` | Define o projeto e a dependência do pacote `openai_simulation`. |
-| `form2.pas` / `form2.lfm` | Interface visual, timer, desenho e exportação simples. |
+| `form2.pas` / `form2.lfm` | Interface visual desenhada em código, timer, histórico e exportação. |
+| `uFormConfig.pas` | Tela de configurações. |
 | `uTipos.pas` | Define `TTipo` e `TSer`, herdando de `TAISimEntity`. |
 | `uConfig.pas` | Configuração estática da simulação. |
 | `uTabuleiro.pas` | Grade 2D com `FBoard` e `FNextBoard`. |
@@ -109,50 +110,32 @@ O código atual não implementa esses recursos.
 
 Essa divergência foi corrigida na documentação atual, mas é importante manter a regra: **documentar apenas o que existe no código**.
 
-### 4.2 `TTabuleiro.Mover` deve inicializar `Result`
+### 4.2 Busca de presa em apenas 4 direções (corrigido)
 
-O método `Mover` retorna `Boolean`, mas deve garantir explicitamente:
+`ObterPreyAdjacente` consultava somente `FBoard`. Como os vizinhos já processados no ciclo já tinham migrado para `FNextBoard`, herbívoros e carnívoros só comiam para a direita e para baixo, e derivavam nesse sentido.
 
-```pascal
-Result := False;
-```
+Correção aplicada: `TTabuleiro.GetSerVivo` olha os dois estados, e `MarcarMorto` mata também quem já migrou, liberando esses seres no `Commit` pela lista `FMortos`.
 
-logo no início.
+### 4.3 Correções pequenas já aplicadas
 
-Sem isso, em caminhos onde a célula de destino não está livre, o retorno pode ficar indefinido.
+- `TTabuleiro.Mover` inicia `Result := False`.
+- `TForm2.FormDestroy` libera `FSimulacao`.
+- O desenho acompanha o redimensionamento da janela.
+- O painel mostra matéria orgânica e células vazias separadamente.
+- A tela sorteia a semente a cada nova simulação.
+- Reprodução de animais e bactérias depende de alimentação; bactéria tem fome.
+- `ConfigPadrao` foi reajustado para as regras atuais.
 
-### 4.3 `FSimulacao` precisa ser liberado ao fechar o formulário
+### 4.4 Interface refeita
 
-`TForm2` cria `FSimulacao`, mas a versão atual não mostra um tratamento de `OnDestroy` para liberar o objeto ao encerrar a aplicação.
+A tela principal passou a ser desenhada por inteiro em um `TPaintBox`, com tema escuro, painel de população, gráfico de histórico, avanço por ciclo e controle de velocidade. A configuração ganhou tela própria (`uFormConfig.pas`) e a exportação grava o histórico completo.
 
-Recomendação:
+Pontos de atenção que ficaram:
 
-```pascal
-procedure TForm2.FormDestroy(Sender: TObject);
-begin
-  FreeAndNil(FSimulacao);
-end;
-```
-
-Também é necessário vincular o evento `OnDestroy` no `.lfm`.
-
-### 4.4 Configuração ainda é estática
-
-O botão **Configurações** apenas mostra uma mensagem informando que os parâmetros estão na unit `uConfig.pas`.
-
-Isso é aceitável para demo, mas limita o uso prático do projeto.
-
-### 4.5 Exportação CSV é apenas snapshot
-
-O botão **Exportar CSV** grava somente o estado atual da população.
-
-Ainda não existe histórico por ciclo nem exportação de série temporal.
-
-### 4.6 Renderização simples pode limitar escalabilidade
-
-A renderização atual usa `Canvas.FillRect` célula por célula.
-
-Para grades maiores, o ideal seria migrar para renderização em `TBitmap` com acesso por linha/pixel, evitando redesenho pesado diretamente no canvas do componente.
+- os botões da tela principal não são controles da LCL (sem foco por teclado, fora do editor de formulários);
+- as configurações alteradas não são gravadas em disco;
+- o histórico cresce um registro por ciclo, sem limite;
+- o tabuleiro é desenhado com `FillRect` por célula, o que pode pesar em grades grandes.
 
 ### 4.7 Regras estão fixas no código
 
@@ -169,10 +152,10 @@ Isso é simples, mas dificulta customização. Uma futura versão poderia migrar
 | Ideia do projeto | Boa |
 | Valor didático | Alto |
 | Integração com `CHATGPT` | Inicial |
-| Interface | Simples e funcional |
-| Configuração | Básica / estática |
-| Estatísticas | Básicas |
-| Exportação | Básica |
+| Interface | Completa para demonstração |
+| Configuração | Editável na tela, sem gravação em disco |
+| Estatísticas | População e histórico por ciclo |
+| Exportação | Histórico completo em CSV |
 | Arquitetura | Pequena, compreensível, mas ainda específica |
 | Uso como demo de AI Simulation | Válido, mas ainda mínimo |
 | Pronto para ensino/demonstração | Sim |
@@ -184,19 +167,15 @@ Isso é simples, mas dificulta customização. Uma futura versão poderia migrar
 
 ### Prioridade 0 — Correções pequenas e importantes
 
-1. Inicializar `Result := False` em `TTabuleiro.Mover`.
-2. Adicionar `FormDestroy` para liberar `FSimulacao`.
-3. Ajustar o botão **Configurações** para deixar claro que ainda não há tela de configuração.
-4. Garantir que o caminho local do `CHATGPT` no `.lpi` seja documentado ou removido quando possível.
+1. Conferir os caminhos do `CHATGPT` no `.lpi`: há um relativo (`..\..\CHATGPT\pacote`) e o antigo em `P:\`; ambos são redundantes com a dependência do pacote `openai_simulation`.
+2. Transformar os `testeN.lpr` em testes com verificação automática.
 
 ### Prioridade 1 — Melhorias funcionais
 
-5. Criar tela real de configuração.
-6. Registrar histórico por ciclo.
-7. Exportar histórico completo em CSV.
-8. Melhorar renderização usando bitmap.
-9. Adicionar opção de seed aleatória quando `Seed = 0`.
-10. Exibir células vazias separadamente de matéria orgânica.
+3. Gravar e carregar configurações em arquivo.
+4. Melhorar renderização usando scanline.
+5. Avaliar o custo de `TAISimEntity` por ser (GUID e `TJSONObject` criados a cada nascimento).
+6. Limitar ou compactar o histórico em execuções muito longas.
 
 ### Prioridade 2 — Evolução como demo do `CHATGPT`
 

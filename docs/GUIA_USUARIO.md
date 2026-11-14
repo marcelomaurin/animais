@@ -8,10 +8,12 @@ A aplicação mostra uma grade 2D onde diferentes tipos de seres aparecem, se mo
 
 ## O que aparece na tela
 
-A tela principal é dividida em duas partes:
-
-1. **Área do tabuleiro**: mostra a simulação em tempo real.
-2. **Painel lateral**: mostra os contadores e botões de controle.
+- **Barra superior**: nome, tamanho da grade e os botões Configurações, Exportar histórico e Sobre.
+- **Controles**: Iniciar/Pausar, Avançar 1 ciclo, Reiniciar e velocidade.
+- **Tabuleiro**: a simulação em tempo real.
+- **Cartões**: ciclo atual, semente em uso e tempo médio por ciclo.
+- **População**: quantidade, percentual e barra de cada grupo.
+- **Histórico**: gráfico dos últimos 600 ciclos.
 
 ---
 
@@ -22,112 +24,67 @@ A tela principal é dividida em duas partes:
 | Preto | Célula vazia |
 | Amarelo | Bactéria |
 | Verde | Planta |
-| Azul | Herbívoro / vegetariano |
-| Vermelho | Carnívoro |
+| Azul claro | Herbívoro |
+| Laranja-avermelhado | Carnívoro |
 | Marrom | Matéria orgânica |
 
 ---
 
-## Contadores exibidos
+## Controles
 
-O painel lateral mostra:
+### Iniciar / Pausar
 
-- ciclo atual;
-- quantidade de bactérias;
-- quantidade de plantas;
-- quantidade de herbívoros / vegetarianos;
-- quantidade de carnívoros;
-- quantidade de matéria orgânica;
-- tempo do último ciclo;
-- FPS aproximado.
+Liga ou desliga a execução dos ciclos. Atalho: **Espaço**.
 
-A versão atual **não possui abas**, **não possui gráfico histórico** e **não possui painel de subespécies**.
+### Avançar 1 ciclo
 
----
-
-## Botões disponíveis
-
-### Iniciar
-
-Liga o timer da simulação e começa a executar ciclos.
-
-### Pausar
-
-Desliga temporariamente o timer. A simulação permanece no estado atual.
-
-### Parar
-
-Interrompe a simulação, descarta o estado atual e cria uma nova simulação com a configuração padrão.
+Executa um único ciclo, com a simulação pausada ou não. Atalho: **seta para a direita**.
 
 ### Reiniciar
 
-Cria uma nova simulação usando a configuração padrão.
+Cria uma nova simulação com as configurações atuais e uma nova semente sorteada (se o campo Semente estiver em 0). Atalho: **R**.
 
-### Configurações
+### Velocidade
 
-Na versão atual, este botão apenas informa que a configuração está definida na unit `uConfig.pas`.
-
-Ainda não existe uma tela visual de configuração.
-
-### Exportar CSV
-
-Exporta um arquivo chamado:
-
-```text
-export_form.csv
-```
-
-O arquivo contém apenas um resumo do estado atual, com:
-
-- ciclo;
-- bactérias;
-- plantas;
-- herbívoros;
-- carnívoros;
-- matéria orgânica;
-- células vazias.
-
-A versão atual **não exporta histórico completo por ciclo**.
-
-### Sobre
-
-Mostra uma mensagem simples sobre o projeto.
+Define quantos ciclos são executados a cada atualização da tela: 1, 4 ou 16.
 
 ---
 
-## Configuração da simulação
+## Histórico
 
-Os parâmetros atuais ficam no arquivo:
+O gráfico mostra uma linha por grupo, nas mesmas cores do tabuleiro. A escala vertical é logarítmica (linhas de referência em 10, 100 e 1000), para que grupos pequenos, como os carnívoros, apareçam junto com os grandes, como as plantas.
 
-```text
-uConfig.pas
-```
+---
 
-A configuração padrão define valores como:
+## Configurações
 
-- largura da grade;
-- altura da grade;
-- porcentagem inicial de bactérias;
-- porcentagem inicial de plantas;
-- porcentagem inicial de herbívoros;
-- porcentagem inicial de carnívoros;
-- vida máxima por tipo;
-- fome máxima de herbívoros e carnívoros;
-- ciclos de reprodução;
-- tempo de degradação da matéria orgânica;
-- ciclo de entrada dos carnívoros.
+Abre uma tela com os parâmetros da simulação:
+
+- **Tabuleiro**: largura, altura, semente, ciclo de entrada dos carnívoros e degradação da matéria orgânica.
+- **Espécies**: proporção inicial, vida máxima, fome máxima e ciclos para reproduzir.
+
+**Aplicar e reiniciar** valida os campos e inicia uma nova simulação. **Restaurar padrão** recarrega os valores de `uConfig.pas`. **Cancelar** fecha sem alterar.
+
+Os valores alterados valem até o programa ser fechado.
+
+Para repetir uma simulação, copie o número do cartão **Semente** para o campo Semente. Com 0, a semente é sorteada a cada reinício.
+
+---
+
+## Exportar histórico
+
+Grava um arquivo CSV com uma linha por ciclo, desde o início da simulação atual, com as colunas: ciclo, bactérias, plantas, herbívoros, carnívoros, matéria orgânica e células vazias.
 
 ---
 
 ## Como usar
 
-1. Abra o projeto `animal.lpi` no Lazarus.
+1. Abra o projeto `src/animal.lpi` no Lazarus (ou instale pelo instalador e abra o programa pelo menu Iniciar).
 2. Compile e execute.
 3. Clique em **Iniciar**.
-4. Observe a evolução das populações no painel lateral.
-5. Use **Pausar** para congelar o estado atual.
-6. Use **Exportar CSV** para gravar o resumo atual.
-7. Use **Reiniciar** ou **Parar** para recomeçar a simulação.
+4. Acompanhe a população e o histórico no painel à direita.
+5. Use **Pausar** e **Avançar 1 ciclo** para examinar um momento específico.
+6. Use **Exportar histórico** para analisar os dados em uma planilha.
 
 ---
 
@@ -135,13 +92,8 @@ A configuração padrão define valores como:
 
 A versão atual ainda não possui:
 
-- tela visual de configuração;
-- gráfico populacional;
-- histórico completo por ciclo;
-- subespécies;
-- mutações complexas;
+- gravação das configurações em arquivo;
+- cenários pré-configurados;
+- subespécies e mutações;
 - relatório detalhado de mortes;
-- salvamento e carregamento de cenários;
 - integração completa com todos os componentes `AI Simulation` da biblioteca `CHATGPT`.
-
-Esses itens são candidatos naturais para evolução futura.

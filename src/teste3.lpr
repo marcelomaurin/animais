@@ -27,6 +27,7 @@ begin
   WriteLn('VidaCarnivoro: ', Cfg.VidaCarnivoro);
   WriteLn('FomeHerbivoro: ', Cfg.FomeHerbivoro);
   WriteLn('FomeCarnivoro: ', Cfg.FomeCarnivoro);
+  WriteLn('FomeBacteria: ', Cfg.FomeBacteria);
   WriteLn('ReproPlanta: ', Cfg.ReproPlanta);
   WriteLn('ReproHerbivoro: ', Cfg.ReproHerbivoro);
   WriteLn('ReproCarnivoro: ', Cfg.ReproCarnivoro);

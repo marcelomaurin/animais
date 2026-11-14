@@ -1,0 +1,3 @@
+Pasta de saida.
+animal.exe e gerado aqui pelo Lazarus (src\animal.lpi).
+O instalador (Animais-<versao>-instalador.exe) e gerado aqui por gerar_instalador.bat, com o Inno Setup.

@@ -1,5 +1,7 @@
 # Plano de construção — Ecossistema simplificado (Lazarus / Free Pascal)
 
+> **Nota:** este é o plano original usado para construir a primeira versão. O código evoluiu depois dele: a presa passou a ser procurada nos dois tabuleiros, a reprodução de animais e bactérias depende de alimentação, a bactéria tem fome e os valores de `ConfigPadrao` foram reajustados. As regras em vigor estão em `REGRAS_JOGO_DA_VIDA_MODIFICADO.md`.
+
 Instruções para um agente de código. Execute **uma etapa por vez**, na ordem.
 Ao fim de cada etapa: **compile e rode** o teste indicado antes de seguir.
 Não avance se a etapa anterior não compilar.

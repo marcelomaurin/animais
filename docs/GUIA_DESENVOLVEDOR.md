@@ -9,7 +9,10 @@ O projeto é uma aplicação Lazarus / Free Pascal que simula um pequeno ecossis
 - `uTabuleiro.pas`;
 - `uSimulacao.pas`;
 - `uEstat.pas`;
+- `uFormConfig.pas`;
 - `form2.pas` / `form2.lfm`.
+
+Os fontes ficam em `src/`, o executável é gerado em `bin/` e o roteiro do instalador para o Inno Setup fica em `instalador/animais.iss` (`gerar_instalador.bat`, na raiz, compila e grava o instalador em `bin/`).
 
 O projeto também declara dependência do pacote `openai_simulation` e usa `TAISimEntity` como ancestral da classe `TSer`.
 
@@ -70,7 +73,8 @@ Pontos importantes:
 - declara dependência do pacote `openai_simulation`;
 - declara dependência de `LCL`;
 - inclui as units principais do projeto;
-- possui caminho local para a biblioteca `CHATGPT`, que pode precisar ser ajustado em outra máquina.
+- grava o executável em `..\bin`;
+- procura a biblioteca `CHATGPT` em `..\..\CHATGPT\pacote` (pasta irmã do projeto), mantendo o caminho antigo em `P:\` como alternativa.
 
 ---
 
@@ -97,7 +101,8 @@ Campos principais:
 - `FomeMax`: limite de fome;
 - `Repro`: contador de reprodução;
 - `ReproMax`: ciclo necessário para reproduzir;
-- `Morto`: marca se a entidade morreu.
+- `Morto`: marca se a entidade morreu;
+- `Alimentado`: indica que o ser comeu desde a última reprodução (exigido para animais e bactérias se reproduzirem).
 
 Construtor principal:
 
@@ -126,6 +131,7 @@ Parâmetros principais:
 - `VidaCarnivoro`;
 - `FomeHerbivoro`;
 - `FomeCarnivoro`;
+- `FomeBacteria` (0 desliga a fome da bactéria);
 - `ReproPlanta`;
 - `ReproHerbivoro`;
 - `ReproCarnivoro`;
@@ -133,7 +139,7 @@ Parâmetros principais:
 - `DegradaMateria`;
 - `CicloEntradaCarnivoro`.
 
-Na versão atual, a configuração é estática. Não há tela de edição visual dos parâmetros.
+`ConfigPadrao` devolve os valores iniciais. A tela de configurações (`uFormConfig.pas`) edita uma cópia mantida pelo formulário principal.
 
 ---
 
@@ -156,17 +162,20 @@ Métodos principais:
 - `InBounds(X, Y)`: verifica se a coordenada está dentro da grade;
 - `GetSer(X, Y)`: retorna o ser no estado atual;
 - `GetSerNext(X, Y)`: retorna o ser no próximo estado;
+- `GetSerVivo(X, Y)`: retorna o ser vivo da célula olhando os dois estados (quem já foi processado no ciclo está no próximo);
 - `CelulaLivreNext(X, Y)`: verifica se a posição está livre no próximo estado;
 - `PrepararProximo`: limpa o próximo buffer;
 - `Mover(X, Y, NX, NY)`: move um ser do estado atual para o próximo estado;
 - `Colocar(ASer, X, Y)`: coloca um ser no próximo estado;
 - `ColocarNoBoard(ASer, X, Y)`: coloca diretamente no estado atual, usado na semeadura inicial;
-- `MarcarMorto(X, Y)`: marca um ser como morto;
-- `Commit`: troca os buffers e libera os seres marcados como mortos.
+- `MarcarMorto(X, Y)`: mata o ser vivo da célula, esteja ele no estado atual ou no próximo; quem já tinha migrado vai para a lista `FMortos`;
+- `Commit`: troca os buffers e libera os seres marcados como mortos, inclusive os da lista `FMortos`.
 
 ### Atenção técnica
 
-O método `Mover` deve sempre retornar `False` quando não conseguir mover. Vale revisar o código para garantir que `Result` seja inicializado no início do método.
+- `Mover` inicia `Result := False` e só devolve `True` quando o destino está livre no próximo estado.
+- Um ser recém-transformado em matéria orgânica fica, até o `Commit`, com o mesmo ponteiro nos dois estados. `MarcarMorto`, `Commit` e `Destroy` tratam esse caso.
+- A busca de presa precisa usar `GetSerVivo`. Usar apenas `GetSer` faz o predador enxergar só 4 das 8 direções, porque os vizinhos já processados migraram para o próximo estado.
 
 ---
 
@@ -205,14 +214,17 @@ Métodos principais:
 
 ### Regras atuais
 
-- Bactérias podem comer matéria orgânica.
-- Herbívoros podem comer plantas adjacentes.
-- Carnívoros podem comer herbívoros adjacentes.
-- Herbívoros e carnívoros acumulam fome quando não comem.
-- Plantas, herbívoros e carnívoros mortos viram matéria orgânica.
-- Matéria orgânica pode degradar e virar bactéria.
+- Bactérias comem matéria orgânica adjacente.
+- Herbívoros comem plantas adjacentes.
+- Carnívoros comem herbívoros adjacentes.
+- A presa é procurada nas 8 células vizinhas, nos dois estados do tabuleiro.
+- Herbívoros, carnívoros e bactérias acumulam fome quando não comem.
+- Plantas, herbívoros e carnívoros mortos por idade ou fome viram matéria orgânica; bactérias apenas somem.
+- Matéria orgânica degrada e vira bactéria.
 - Bactérias, herbívoros e carnívoros podem se mover aleatoriamente.
-- Seres podem reproduzir quando atingem `ReproMax`.
+- Plantas se reproduzem ao atingir `ReproMax`; os demais também precisam ter comido desde a última reprodução (`Alimentado`).
+
+A descrição completa está em `docs/REGRAS_JOGO_DA_VIDA_MODIFICADO.md`.
 
 ---
 
@@ -230,7 +242,7 @@ Campos:
 - `Materia`;
 - `Vazios`.
 
-A versão atual mantém apenas um resumo instantâneo. Ainda não existe histórico completo por ciclo.
+O motor só produz o resumo instantâneo; o histórico por ciclo é guardado pelo formulário principal (`FHist`).
 
 ---
 
@@ -238,24 +250,36 @@ A versão atual mantém apenas um resumo instantâneo. Ainda não existe histór
 
 Interface principal da aplicação.
 
-Responsabilidades:
+O `.lfm` contém apenas o formulário, um `TPaintBox` (`pbTela`) que ocupa toda a janela e o `TTimer`. A tela inteira é desenhada em código, em um bitmap de apoio (`FBuf`) copiado para o `TPaintBox`.
 
-- criar `TSimulacao`;
-- controlar o timer `tmCycle`;
-- desenhar o tabuleiro no `TImage`;
-- atualizar labels de estatísticas;
-- iniciar, pausar, parar e reiniciar a simulação;
-- exportar o estado atual para `export_form.csv`;
-- mostrar mensagem de configuração/sobre.
+Pontos principais:
+
+- `Desenhar` calcula a disposição a partir do tamanho da janela e chama `DesenharTabuleiro`, `DesenharPopulacao` e `DesenharHistorico`.
+- `Botao` desenha um botão e registra sua área em `FBotoes`; `pbTelaMouseDown` procura a área clicada e chama `Acionar`.
+- `S(V)` converte medidas de 96 pontos por polegada para a escala do formulário.
+- As cores ficam em constantes no início da implementação (`CorPlanta`, `CorHerbivoro` etc.).
+- `NovaSimulacao` cria a simulação a partir de `FCfg`, sorteando a semente quando `Seed = 0`.
+- `Avancar(K)` executa K ciclos, registra o histórico e mede o tempo médio por ciclo.
+- `FHist` guarda um `TEstat` por ciclo; o gráfico usa os últimos 600 e a exportação grava todos.
+- `FormKeyDown` trata os atalhos (Espaço, seta para a direita, R).
+
+Para acrescentar um botão: crie um valor em `TBotaoId`, desenhe-o com `Botao` dentro de `Desenhar` e trate-o em `Acionar`.
 
 ### Limitações atuais da interface
 
-- Não há tela real de configuração.
-- Não há gráficos.
-- Não há abas.
-- Não há histórico visual.
-- A exportação é apenas do estado atual.
-- O desenho usa `Canvas.FillRect` por célula, não renderização otimizada por `ScanLine`.
+- Os botões da tela principal não são controles da LCL: não recebem foco pelo teclado (há atalhos) e não aparecem no editor de formulários.
+- O desenho usa `FillRect` por célula, não renderização por `ScanLine`.
+- O histórico cresce um registro por ciclo, sem limite.
+
+---
+
+## 9. `uFormConfig.pas`
+
+Tela de configurações. A função `EditarConfig(var Cfg: TConfig): Boolean` abre a tela e devolve `True` quando o usuário aplica.
+
+Os controles são criados em código (`Montar`), sem `.lfm`. `Preencher` copia um `TConfig` para os campos e `Ler` valida e devolve o `TConfig` editado. Os botões são `TPanel` planos, para manter as cores do tema.
+
+Ao criar um parâmetro novo em `TConfig`, acrescente o campo em `Montar`, `Preencher` e `Ler`.
 
 ---
 
@@ -279,18 +303,15 @@ Esses componentes podem ser incorporados em uma próxima etapa.
 2. Atualize `ConfigPadrao`, se o novo tipo precisar de parâmetros próprios.
 3. Atualize `TSimulacao.ProcessarCelula` com as regras do novo tipo.
 4. Atualize `TSimulacao.Contar` para contabilizar o novo tipo.
-5. Atualize `TForm2.Desenha` para definir uma cor visual.
-6. Atualize a exportação CSV, se necessário.
+5. Atualize `CorDoTipo` e `DesenharPopulacao` em `form2.pas`; para aparecer no gráfico, também `TEstat` e `DesenharHistorico`.
+6. Atualize a exportação do histórico e a tela de configurações, se necessário.
 
 ---
 
 ## Próximos passos técnicos
 
-1. Inicializar `Result := False` em `TTabuleiro.Mover`.
-2. Criar `OnDestroy` no formulário para liberar `FSimulacao`.
-3. Criar tela real de configuração.
-4. Criar histórico por ciclo.
-5. Melhorar exportação CSV.
-6. Criar renderização mais eficiente usando bitmap/scanline.
-7. Substituir regras fixas por um motor de regras.
-8. Migrar gradualmente para os componentes completos de `openai_simulation`.
+1. Gravar e carregar configurações em arquivo.
+2. Criar renderização mais eficiente usando scanline.
+3. Substituir regras fixas por um motor de regras.
+4. Migrar gradualmente para os componentes completos de `openai_simulation`.
+5. Transformar os `testeN.lpr`7. Transformar os `testeN.lpr` em testes com verificação automática.

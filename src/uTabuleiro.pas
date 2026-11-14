@@ -16,6 +16,9 @@ type
     FNextBoard: array of array of TSer;
     FW: Integer;
     FH: Integer;
+    // Seres mortos que ja nao estao em nenhum tabuleiro; liberados no Commit
+    FMortos: TFPList;
+    procedure LiberarMortos;
   public
     constructor Create;
     destructor Destroy; override;
@@ -24,6 +27,7 @@ type
     function InBounds(X, Y: Integer): Boolean;
     function GetSer(X, Y: Integer): TSer;
     function GetSerNext(X, Y: Integer): TSer;
+    function GetSerVivo(X, Y: Integer): TSer;
     function CelulaLivreNext(X, Y: Integer): Boolean;
     procedure PrepararProximo;
     function Mover(X, Y, NX, NY: Integer): Boolean;
@@ -44,12 +48,16 @@ constructor TTabuleiro.Create;
 begin
   FW := 0;
   FH := 0;
+  FMortos := TFPList.Create;
 end;
 
 destructor TTabuleiro.Destroy;
 var
   X, Y: Integer;
 begin
+  LiberarMortos;
+  FMortos.Free;
+
   // Libera todos os objetos que estiverem no FBoard
   for X := 0 to FW - 1 do
   begin
@@ -57,6 +65,9 @@ begin
     begin
       if Assigned(FBoard[X, Y]) then
       begin
+        // O mesmo ser pode estar nos dois tabuleiros (materia recem-criada)
+        if FNextBoard[X, Y] = FBoard[X, Y] then
+          FNextBoard[X, Y] := nil;
         FBoard[X, Y].Free;
         FBoard[X, Y] := nil;
       end;
@@ -117,6 +128,28 @@ begin
   Result := FNextBoard[X, Y];
 end;
 
+// Retorna o ser vivo que ocupa a celula neste momento do ciclo, olhando
+// primeiro o proximo tabuleiro (quem ja foi processado) e depois o atual.
+function TTabuleiro.GetSerVivo(X, Y: Integer): TSer;
+begin
+  Result := nil;
+  if not InBounds(X, Y) then
+    Exit;
+  if Assigned(FNextBoard[X, Y]) and (not FNextBoard[X, Y].Morto) then
+    Result := FNextBoard[X, Y]
+  else if Assigned(FBoard[X, Y]) and (not FBoard[X, Y].Morto) then
+    Result := FBoard[X, Y];
+end;
+
+procedure TTabuleiro.LiberarMortos;
+var
+  I: Integer;
+begin
+  for I := 0 to FMortos.Count - 1 do
+    TSer(FMortos[I]).Free;
+  FMortos.Clear;
+end;
+
 function TTabuleiro.CelulaLivreNext(X, Y: Integer): Boolean;
 begin
   if not InBounds(X, Y) then
@@ -139,10 +172,11 @@ end;
 
 function TTabuleiro.Mover(X, Y, NX, NY: Integer): Boolean;
 begin
+  Result := False;
   if not InBounds(X, Y) then
-    Exit(False);
+    Exit;
   if not InBounds(NX, NY) then
-    Exit(False);
+    Exit;
 
   if CelulaLivreNext(NX, NY) then
   begin
@@ -187,16 +221,22 @@ procedure TTabuleiro.MarcarMorto(X, Y: Integer);
 var
   Ser: TSer;
 begin
-  Ser := GetSer(X, Y);
-  if Assigned(Ser) then
+  // Mata o ser vivo da celula, esteja ele no tabuleiro atual (ainda nao
+  // processado) ou no proximo (ja processado neste ciclo).
+  Ser := GetSerVivo(X, Y);
+  if not Assigned(Ser) then
+    Exit;
+
+  Ser.Morto := True;
+  if FNextBoard[X, Y] = Ser then
   begin
-    Ser.Morto := True;
-    if InBounds(X, Y) then
-    begin
-      if FNextBoard[X, Y] = Ser then
-        FNextBoard[X, Y] := nil;
-    end;
+    FNextBoard[X, Y] := nil;
+    // Se nao esta tambem no tabuleiro atual, ninguem mais aponta para ele:
+    // guarda na lista para liberar no Commit.
+    if FBoard[X, Y] <> Ser then
+      FMortos.Add(Ser);
   end;
+  // Se esta no tabuleiro atual, o Commit libera ao varrer o tabuleiro antigo.
 end;
 
 procedure TTabuleiro.Commit;
@@ -230,6 +270,9 @@ begin
       end;
     end;
   end;
+
+  // Libera quem foi morto depois de ja ter migrado para o proximo tabuleiro
+  LiberarMortos;
 end;
 
 end.

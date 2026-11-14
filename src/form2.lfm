@@ -1,0 +1,36 @@
+object Form2: TForm2
+  Left = 250
+  Height = 820
+  Top = 100
+  Width = 1280
+  Caption = 'Animais — Jogo da Vida Evoluído'
+  ClientHeight = 820
+  ClientWidth = 1280
+  Color = 1118989
+  Constraints.MinHeight = 680
+  Constraints.MinWidth = 1000
+  DoubleBuffered = True
+  KeyPreview = True
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  OnKeyDown = FormKeyDown
+  ParentDoubleBuffered = False
+  Position = poScreenCenter
+  object pbTela: TPaintBox
+    Left = 0
+    Height = 820
+    Top = 0
+    Width = 1280
+    Align = alClient
+    OnMouseDown = pbTelaMouseDown
+    OnMouseMove = pbTelaMouseMove
+    OnPaint = pbTelaPaint
+  end
+  object tmCycle: TTimer
+    Enabled = False
+    Interval = 100
+    OnTimer = tmCycleTimer
+    Left = 40
+    Top = 40
+  end
+end

@@ -10,7 +10,7 @@ uses
   athreads,
   {$ENDIF}
   Interfaces, // this includes the LCL widgetset
-  Forms, form2, uConfig, uTipos, uTabuleiro, uSimulacao, uEstat;
+  Forms, form2, uConfig, uTipos, uTabuleiro, uSimulacao, uEstat, uFormConfig;
 
 {$R *.res}
 
